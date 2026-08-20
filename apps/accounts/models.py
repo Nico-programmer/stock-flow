@@ -61,6 +61,15 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     last_name = models.CharField(max_length=150, blank=True, null=True, verbose_name="Apellidos")
     phone_number = models.CharField(max_length=20, blank=True, null=True, verbose_name="Teléfono")
 
+    # Company
+    company = models.ForeignKey(
+        'companies.Company',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='employees',
+        verbose_name="Empresa"
+    )
+
     # Role
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.EMPLOYEE, verbose_name="Rol de usuario")
 
@@ -90,3 +99,39 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     class Meta:
         verbose_name = "Usuario personalizado"
         verbose_name_plural = "Usuarios personalizados"
+
+""" Employee Permissions Model """
+class EmployeePermission(models.Model):
+    user = models.OneToOneField(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name="permissions",
+        verbose_name="Usuario"
+    )
+    company = models.ForeignKey(
+        'companies.Company',
+        on_delete=models.CASCADE,
+        related_name="employee_permissions",
+        verbose_name="Empresa"
+    )
+
+    can_manage_inventory = models.BooleanField(default=False, verbose_name="Gestionar inventario")
+    can_manage_sales = models.BooleanField(default=False, verbose_name="Gestionar ventas")
+    can_manage_employees = models.BooleanField(default=False, verbose_name="Gestionar empleados")
+    can_view_reports = models.BooleanField(default=False, verbose_name="Ver reportes")
+
+    granted_by = models.ForeignKey(
+        CustomUser,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='permissions_granted',
+        verbose_name="Otorgado por"
+    )
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Última actualización")
+
+    def __str__(self):
+        return f'Permisos de {self.user.username} en {self.company.name}'
+
+    class Meta:
+        verbose_name = "Permiso de empleado"
+        verbose_name_plural = "Permisos de empleados"
