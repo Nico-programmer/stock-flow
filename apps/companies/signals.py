@@ -1,7 +1,7 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from accounts.models import CustomUser
-from .models import EmployeePermission
+from apps.accounts.models import CustomUser
+from ..accounts.models import EmployeePermission
 
 
 @receiver(post_save, sender=CustomUser)

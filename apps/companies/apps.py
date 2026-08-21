@@ -5,4 +5,4 @@ class CompaniesConfig(AppConfig):
     name = 'apps.companies'
 
     def ready(self):
-        import companies.signals  # noqa
+        import apps.companies.signals  # noqa

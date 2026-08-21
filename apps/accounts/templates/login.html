@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar sesión</title>
+</head>
+<body>
+    <div>
+        <h2>Iniciar sesión</h2>
+
+        <!-- Error/success messages (django.contrib.messages) -->
+        {% if messages %}
+            <ul>
+                {% for message in messages %}
+                    <li>{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+
+            <div>
+                {{ form.username.label_tag }}
+                {{ form.username }}
+
+                {% if form.username.errors %}
+                    <p>{{ form.username.errors }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                {{ form.password.label_tag }}
+                {{ form.password }}
+
+                {% if form.password.errors %}
+                    <p>{{ form.password.errors }}</p>
+                {% endif %}
+            </div>
+
+            <button type="submit">Ingresar</button>
+        </form>
+    </div>
+</body>
+</html>
