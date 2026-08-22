@@ -1,0 +1,83 @@
+<nav class="sidebar bg-dark d-flex flex-column p-3">
+
+    <a href="{% url 'dashboard' %}" class="d-flex align-items-center mb-3 text-white text-decoration-none">
+        <i class="bi bi-shop fs-4 me-2"></i>
+        <span class="fs-5 fw-semibold">{{ request.user.company.name|default:"Mi Negocio" }}</span>
+    </a>
+    <hr class="text-white-50 mt-0">
+
+    <ul class="nav nav-pills flex-column gap-1">
+
+        <li class="nav-item">
+            <a href="{% url 'dashboard' %}"
+               class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <i class="bi bi-speedometer2 me-2"></i> Inicio
+            </a>
+        </li>
+
+        {% comment %} {% if request.user.role == request.user.Role.ADMIN %}
+        <li class="nav-item">
+            <a href="{% url 'users_list' %}"
+               class="nav-link {% if request.resolver_match.url_name == 'users_list' %}active{% endif %}">
+                <i class="bi bi-people-fill me-2"></i> Gestionar usuarios
+            </a>
+        </li>
+        {% endif %}
+
+        <li><hr class="text-white-50 my-2"></li>
+        <li class="nav-item px-3 pb-1">
+            <span class="text-uppercase text-white-50 small fw-semibold">Operación</span>
+        </li>
+
+        {% if request.user.role == request.user.Role.ADMIN or request.user.employeepermission.can_manage_inventory %}
+        <li class="nav-item">
+            <a href="{% url 'inventory_list' %}"
+               class="nav-link {% if request.resolver_match.url_name == 'inventory_list' %}active{% endif %}">
+                <i class="bi bi-boxes me-2"></i> Inventario
+            </a>
+        </li>
+        {% endif %}
+
+        {% if request.user.role == request.user.Role.ADMIN or request.user.employeepermission.can_manage_sales %}
+        <li class="nav-item">
+            <a href="{% url 'sales_list' %}"
+               class="nav-link {% if request.resolver_match.url_name == 'sales_list' %}active{% endif %}">
+                <i class="bi bi-cart-check-fill me-2"></i> Ventas
+            </a>
+        </li>
+        {% endif %}
+
+        {% if request.user.role == request.user.Role.ADMIN or request.user.employeepermission.can_manage_employees %}
+        <li class="nav-item">
+            <a href="{% url 'employees_list' %}"
+               class="nav-link {% if request.resolver_match.url_name == 'employees_list' %}active{% endif %}">
+                <i class="bi bi-person-badge-fill me-2"></i> Empleados
+            </a>
+        </li>
+        {% endif %}
+
+        {% if request.user.role == request.user.Role.ADMIN or request.user.employeepermission.can_view_reports %}
+        <li class="nav-item">
+            <a href="{% url 'reports' %}"
+               class="nav-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}">
+                <i class="bi bi-graph-up-arrow me-2"></i> Reportes
+            </a>
+        </li>
+        {% endif %} {% endcomment %}
+
+        {% comment %} <li><hr class="text-white-50 my-2"></li> {% endcomment %}
+
+        {% comment %} <li class="nav-item">
+            <a href="{% url 'company_info' %}"
+               class="nav-link {% if request.resolver_match.url_name == 'company_info' %}active{% endif %}">
+                <i class="bi bi-building me-2"></i> Info. compañía
+            </a>
+        </li> {% endcomment %}
+    </ul>
+
+    <div class="mt-auto pt-3 border-top border-secondary-subtle">
+        <a href="{% url 'logout' %}" class="nav-link text-white-50">
+            <i class="bi bi-box-arrow-right me-2"></i> Cerrar sesión
+        </a>
+    </div>
+</nav>
