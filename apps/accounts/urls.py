@@ -10,4 +10,5 @@ urlpatterns = [
 
     # Users Wiews
     path('user-list/', userList_view, name="users_list"),
+    path('create-user/', create_user, name="users_create"),
 ]

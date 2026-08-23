@@ -18,7 +18,7 @@
 
         <li class="nav-item">
             <a href="{% url 'users_list' %}"
-               class="nav-link {% if request.resolver_match.url_name == 'users_list' %}active{% endif %}">
+               class="nav-link {% if request.resolver_match.url_name in 'users_list,users_create,users_edit,users_delete' %}active{% endif %}">
                 <i class="fa-solid fa-users-gear"></i> Gestionar usuarios
             </a>
         </li>

@@ -48,8 +48,9 @@ def login_view(request):
     return render(request, 'login.html', {'form': form})
 
 
-""" Users List Wiew """
-""" Users List View """
+"""------------------------------------------------------------------ Users View ------------------------------------------------------------------"""
+
+# User List
 def userList_view(request):
     query = request.GET.get('q', '').strip()
     role_filter = request.GET.get('role', '')
@@ -96,3 +97,7 @@ def userList_view(request):
         'permission_filter': permission_filter,
     }
     return render(request, "users/user_list.html", context)
+
+# Create users
+def create_user(request):
+    return render(request, 'users/create_users.html')
