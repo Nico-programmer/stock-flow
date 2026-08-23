@@ -1,0 +1,191 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Gestión de usuarios{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+        <div>
+            <h2 class="fw-semibold mb-1">Gestión de usuarios</h2>
+            <p class="text-muted mb-0">Administra a los usuarios que pertenecen a tu empresa.</p>
+        </div>
+        <button class="btn btn-erp-primary text-white">
+            <i class="fa-solid fa-plus"></i> Crear usuario
+        </button>
+    </div>
+
+    <!-- Filters -->
+    <form method="get" class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-5">
+                    <label class="form-label small text-muted mb-1">Buscar</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="fa-solid fa-filter"></i></span>
+                        <input type="text" name="q" value="{{ query }}" class="form-control"
+                            placeholder="Nombre, usuario o correo...">
+                    </div>
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <label class="form-label small text-muted mb-1">Rol</label>
+                    <select name="role" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="admin" {% if role_filter == "admin" %}selected{% endif %}>Administrador</option>
+                        <option value="manager" {% if role_filter == "manager" %}selected{% endif %}>Encargado</option>
+                        <option value="employee" {% if role_filter == "employee" %}selected{% endif %}>Empleado</option>
+                    </select>
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <label class="form-label small text-muted mb-1">Permiso</label>
+                    <select name="permission" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="can_manage_inventory" {% if permission_filter == "can_manage_inventory" %}selected{% endif %}>Inventario</option>
+                        <option value="can_manage_sales" {% if permission_filter == "can_manage_sales" %}selected{% endif %}>Ventas</option>
+                        <option value="can_manage_employees" {% if permission_filter == "can_manage_employees" %}selected{% endif %}>Empleados</option>
+                        <option value="can_view_reports" {% if permission_filter == "can_view_reports" %}selected{% endif %}>Reportes</option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-1 d-grid">
+                    <button type="submit" class="btn btn-erp-primary text-white" title="Filtrar">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </button>
+                </div>
+            </div>
+
+            {% if query or role_filter or permission_filter %}
+                <div class="mt-2">
+                    <a href="{% url 'users_list' %}" class="small text-decoration-none">
+                        <i class="bi bi-x-circle me-1"></i>Limpiar filtros
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </form>
+
+    <!-- List grouped by role -->
+    {% regroup page_obj.object_list by get_role_display as role_groups %}
+
+    {% if page_obj.object_list %}
+        {% for group in role_groups %}
+            <div class="mb-4">
+                <h6 class="text-uppercase text-muted small fw-semibold mb-2">
+                    {{ group.grouper }} <span class="text-muted">({{ group.list|length }})</span>
+                </h6>
+
+                <div class="card border-0 shadow-sm">
+                    <ul class="list-group list-group-flush">
+                        {% for user in group.list %}
+                        <li class="list-group-item">
+                            <div class="d-flex align-items-center flex-wrap gap-3">
+
+                                <!-- Initial Avatars -->
+                                <div class="d-flex align-items-center justify-content-center rounded-circle text-white fw-semibold flex-shrink-0"
+                                    style="width: 42px; height: 42px; background-color: var(--erp-navy);">
+                                    {% if user.role == user.Role.ADMIN %}
+                                        <i class="fa-solid fa-user-shield"></i>
+                                    {% elif user.role == user.Role.MANAGER %}
+                                        <i class="fa-solid fa-user-pen"></i>
+                                    {% else %}
+                                        <i class="fa-solid fa-user"></i>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Name and Contact Information -->
+                                <div class="flex-grow-1" style="min-width: 180px;">
+                                    <div class="fw-semibold">
+                                        {{ user.first_name|default:"" }} {{ user.last_name|default:"" }}
+                                        {% if not user.first_name and not user.last_name %}
+                                            <span class="text-muted">{{ user.username }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="small text-muted">
+                                        <i class="bi bi-at"></i>{{ user.username }} · {{ user.email }}
+                                    </div>
+                                </div>
+
+                                <!-- Permissions -->
+                                <div style="min-width: 160px;">
+                                    {% if user.role == user.Role.ADMIN %}
+                                        <span class="text-muted small">Acceso total</span>
+                                    {% elif user.permissions %}
+                                        {% with perms=user.permissions %}
+                                            {% if perms.can_manage_inventory or perms.can_manage_sales or perms.can_manage_employees or perms.can_view_reports %}
+                                                <div class="d-flex flex-wrap gap-1">
+                                                    {% if perms.can_manage_inventory %}<span class="badge rounded-pill text-bg-light border">Inventario</span>{% endif %}
+                                                    {% if perms.can_manage_sales %}<span class="badge rounded-pill text-bg-light border">Ventas</span>{% endif %}
+                                                    {% if perms.can_manage_employees %}<span class="badge rounded-pill text-bg-light border">Empleados</span>{% endif %}
+                                                    {% if perms.can_view_reports %}<span class="badge rounded-pill text-bg-light border">Reportes</span>{% endif %}
+                                                </div>
+                                            {% else %}
+                                                <span class="badge rounded-pill text-bg-warning text-dark">Sin permisos</span>
+                                            {% endif %}
+                                        {% endwith %}
+                                    {% else %}
+                                        <span class="badge rounded-pill text-bg-warning text-dark">Sin permisos</span>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Actions -->
+                                <div class="ms-auto flex-shrink-0">
+                                    <button class="btn btn-sm btn-outline-secondary" title="Actualizar">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center text-muted py-5">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                No se encontraron usuarios con esos filtros.
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Pagination -->
+    {% if page_obj.paginator.num_pages > 1 %}
+        <nav class="mt-3">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ query }}&role={{ role_filter }}&permission={{ permission_filter }}">
+                            <i class="fa-solid fa-circle-left"></i>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link"><i class="fa-solid fa-circle-left"></i></span></li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    <li class="page-item {% if num == page_obj.number %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}&q={{ query }}&role={{ role_filter }}&permission={{ permission_filter }}">
+                            {{ num }}
+                        </a>
+                    </li>
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ query }}&role={{ role_filter }}&permission={{ permission_filter }}">
+                            <i class="fa-solid fa-circle-right"></i>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link"><i class="fa-solid fa-circle-right"></i></span></li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+{% endblock %}
