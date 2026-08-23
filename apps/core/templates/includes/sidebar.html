@@ -1,7 +1,7 @@
-<nav class="sidebar bg-dark d-flex flex-column p-3">
+<nav class="sidebar d-flex flex-column p-3">
 
     <a href="{% url 'dashboard' %}" class="d-flex align-items-center mb-3 text-white text-decoration-none">
-        <i class="bi bi-shop fs-4 me-2"></i>
+        <i class="bi bi-box-seam-fill brand-icon fs-4 me-2"></i>
         <span class="fs-5 fw-semibold">{{ request.user.company.name|default:"Mi Negocio" }}</span>
     </a>
     <hr class="text-white-50 mt-0">
@@ -63,16 +63,17 @@
                 <i class="bi bi-graph-up-arrow me-2"></i> Reportes
             </a>
         </li>
-        {% endif %} {% endcomment %}
+        {% endif %} 
 
-        {% comment %} <li><hr class="text-white-50 my-2"></li> {% endcomment %}
+        <li><hr class="text-white-50 my-2"></li>
 
-        {% comment %} <li class="nav-item">
+        <li class="nav-item">
             <a href="{% url 'company_info' %}"
                class="nav-link {% if request.resolver_match.url_name == 'company_info' %}active{% endif %}">
                 <i class="bi bi-building me-2"></i> Info. compañía
             </a>
-        </li> {% endcomment %}
+        </li>
+        {% endcomment %}
     </ul>
 
     <div class="mt-auto pt-3 border-top border-secondary-subtle">
