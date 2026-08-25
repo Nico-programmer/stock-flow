@@ -114,8 +114,12 @@ def create_user(request):
         # --- 1. Preliminary validations (without touching the database) ---
         errors = []
 
+        if not first_name:
+            errors.append("El nombre es obligatorio.")
+        if not last_name:
+            errors.append("El apellido es obligatorio.")
         if not username:
-            errors.append("El nombre del usuario es obligatorio.")
+            errors.append("El nombre de usuario es obligatorio.")
         if not email:
             errors.append("El correo electrónico es obligatorio.")
         if not password:
@@ -124,17 +128,14 @@ def create_user(request):
             errors.append("Las contraseñas no coinciden.")
         if role not in ('manager', 'employee'):
             errors.append("Selecciona un rol válido.")
-        if CustomUser.objects.filter(username=username).exists():
+        if username and CustomUser.objects.filter(username=username).exists():
             errors.append("Ese nombre de usuario ya está en uso.")
-        if CustomUser.objects.filter(email=email).exists():
+        if email and CustomUser.objects.filter(email=email).exists():
             errors.append("Ese correo ya está registrado.")
 
         if errors:
-            for error in errors:
-                messages.error(request, error)
-
-            # Re-render the form, preserving what has already been written (except passwords)
-            return render(request, 'users/create_users.html',{
+            messages.error(request, errors[0])  # ← only the first one, not a for loop
+            return render(request, 'users/create_users.html', {
                 'first_name': first_name,
                 'last_name': last_name,
                 'username': username,

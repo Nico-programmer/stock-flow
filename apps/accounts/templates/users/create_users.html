@@ -14,54 +14,72 @@
     </div>
 </div>
 
-<form method="POST">
+<form method="POST" id="create-user-form">
     {% csrf_token %}
 
     <div class="card border-0 shadow-sm mb-3">
         <div class="card-body">
             <h6 class="text-uppercase text-muted small fw-semibold mb-3">Datos personales</h6>
 
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-danger py-2 small" role="alert">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="first_name" class="form-label">Nombres</label>
                     <input type="text" id="first_name" name="first_name" class="form-control"
-                           placeholder="Nombre del usuario">
+                           placeholder="Nombre del usuario" value="{{ first_name|default:'' }}">
                 </div>
 
                 <div class="col-md-6">
                     <label for="last_name" class="form-label">Apellidos</label>
                     <input type="text" id="last_name" name="last_name" class="form-control"
-                           placeholder="Apellidos del usuario">
+                           placeholder="Apellidos del usuario" value="{{ last_name|default:'' }}">
                 </div>
 
                 <div class="col-md-6">
                     <label for="username" class="form-label">Nombre de usuario</label>
                     <input type="text" id="username" name="username" class="form-control"
-                           placeholder="Asigna un nombre de usuario" required>
+                           placeholder="Asigna un nombre de usuario" value="{{ username|default:'' }}">
                 </div>
 
                 <div class="col-md-6">
                     <label for="email" class="form-label">Correo electrónico</label>
-                    <input type="email" id="email" name="email" class="form-control"
-                           placeholder="correo@ejemplo.com" required>
+                    <input type="email" id="email" name="email" class="form-control" placeholder="correo@ejemplo.com" value="{{ email|default:'' }}">
                 </div>
 
                 <div class="col-md-6">
                     <label for="password" class="form-label">Contraseña</label>
-                    <input type="password" id="password" name="password" class="form-control" required>
+
+                    <div class="input-group">
+                        <input type="password" id="password" name="password" class="form-control" placeholder="Contraseña">
+                        <button type="button" class="btn btn-outline-secondary toggle-password" data-target="password">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="col-md-6">
                     <label for="password2" class="form-label">Confirmar contraseña</label>
-                    <input type="password" id="password2" name="password2" class="form-control" required>
+                    <div class="input-group">
+                        <input type="password" id="password2" name="password2" class="form-control" placeholder="Contraseña">
+                        <button type="button" class="btn btn-outline-secondary toggle-password" data-target="password2">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="col-md-6">
                     <label for="role" class="form-label">Rol</label>
-                    <select name="role" id="role" class="form-select" required>
-                        <option value="" disabled selected>Selecciona el rol del empleado</option>
-                        <option value="manager">Manager</option>
-                        <option value="employee">Empleado</option>
+                    <select name="role" id="role" class="form-select">
+                        <option value="" disabled {% if not role %}selected{% endif %}>Selecciona el rol del empleado</option>
+                        <option value="manager" {% if role == "manager" %}selected{% endif %}>Manager</option>
+                        <option value="employee" {% if role == "employee" %}selected{% endif %}>Empleado</option>
                     </select>
                 </div>
             </div>
@@ -123,4 +141,6 @@
         <a href="{% url 'users_list' %}" class="btn btn-outline-secondary">Cancelar</a>
     </div>
 </form>
+
+<script src="{% static "js/create_user.script.js" %}"></script>
 {% endblock %}
