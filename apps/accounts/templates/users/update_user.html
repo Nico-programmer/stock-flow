@@ -1,7 +1,9 @@
 {% extends "layout.html" %}
 {% load static %}
 
-{% block title %}Crear usuario{% endblock %}
+{% block title %}
+    {{ employee.username }}
+{% endblock %}
 
 {% block content %}
 <div class="d-flex align-items-center gap-2 mb-4">
@@ -9,8 +11,8 @@
         <i class="fa-solid fa-arrow-left"></i>
     </a>
     <div>
-        <h2 class="fw-semibold mb-0">Crear un nuevo usuario</h2>
-        <p class="text-muted mb-0">Completa los datos y asigna sus permisos.</p>
+        <h2 class="fw-semibold mb-0">{{ employee.first_name }} {{ employee.last_name }}</h2>
+        <p class="text-muted mb-0">Actualiza los datos y reasigna sus permisos.</p>
     </div>
 </div>
 
@@ -24,44 +26,30 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="first_name" class="form-label">Nombres</label>
-                    <input type="text" id="first_name" name="first_name" class="form-control"
-                           placeholder="Nombre del usuario">
+                    <input type="text" id="first_name" name="first_name" class="form-control" placeholder="Nombre del usuario" value="{{ employee.first_name }}">
                 </div>
 
                 <div class="col-md-6">
                     <label for="last_name" class="form-label">Apellidos</label>
-                    <input type="text" id="last_name" name="last_name" class="form-control"
-                           placeholder="Apellidos del usuario">
+                    <input type="text" id="last_name" name="last_name" class="form-control" placeholder="Apellidos del usuario" value="{{ employee.last_name }}">
                 </div>
 
                 <div class="col-md-6">
                     <label for="username" class="form-label">Nombre de usuario</label>
-                    <input type="text" id="username" name="username" class="form-control"
-                           placeholder="Asigna un nombre de usuario" required>
+                    <input type="text" id="username" name="username" class="form-control" placeholder="Asigna un nombre de usuario" value="{{ employee.username }}">
                 </div>
 
                 <div class="col-md-6">
                     <label for="email" class="form-label">Correo electrónico</label>
-                    <input type="email" id="email" name="email" class="form-control"
-                           placeholder="correo@ejemplo.com" required>
-                </div>
-
-                <div class="col-md-6">
-                    <label for="password" class="form-label">Contraseña</label>
-                    <input type="password" id="password" name="password" class="form-control" required>
-                </div>
-
-                <div class="col-md-6">
-                    <label for="password2" class="form-label">Confirmar contraseña</label>
-                    <input type="password" id="password2" name="password2" class="form-control" required>
+                    <input type="email" id="email" name="email" class="form-control" placeholder="correo@ejemplo.com" value="{{ employee.email }}">
                 </div>
 
                 <div class="col-md-6">
                     <label for="role" class="form-label">Rol</label>
-                    <select name="role" id="role" class="form-select" required>
+                    <select name="role" id="role" class="form-select">
                         <option value="" disabled selected>Selecciona el rol del empleado</option>
-                        <option value="manager">Manager</option>
-                        <option value="employee">Empleado</option>
+                        <option value="manager" {% if employee.role == "manager" %}selected{% endif %}>Manager</option>
+                        <option value="employee" {% if employee.role == "employee" %}selected{% endif %}>Empleado</option>
                     </select>
                 </div>
             </div>
@@ -75,8 +63,7 @@
             <div class="row g-2">
                 <div class="col-md-6">
                     <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" role="switch"
-                               name="can_manage_inventory" id="can_manage_inventory">
+                        <input class="form-check-input" type="checkbox" role="switch" name="can_manage_inventory" id="can_manage_inventory" {% if permissions.can_manage_inventory %}checked{% endif %}>
                         <label class="form-check-label" for="can_manage_inventory">
                             <i class="fa-solid fa-boxes-stacked me-1"></i> Manejo de inventario
                         </label>
@@ -85,8 +72,7 @@
 
                 <div class="col-md-6">
                     <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" role="switch"
-                               name="can_manage_sales" id="can_manage_sales">
+                        <input class="form-check-input" type="checkbox" role="switch" name="can_manage_sales" id="can_manage_sales" {% if permissions.can_manage_sales %}checked{% endif %}>
                         <label class="form-check-label" for="can_manage_sales">
                             <i class="fa-solid fa-cart-shopping me-1"></i> Manejo de ventas
                         </label>
@@ -95,8 +81,7 @@
 
                 <div class="col-md-6">
                     <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" role="switch"
-                               name="can_manage_employees" id="can_manage_employees">
+                        <input class="form-check-input" type="checkbox" role="switch" name="can_manage_employees" id="can_manage_employees" {% if permissions.can_manage_employees %}checked{% endif %}>
                         <label class="form-check-label" for="can_manage_employees">
                             <i class="fa-solid fa-id-badge me-1"></i> Manejo de empleados
                         </label>
@@ -105,8 +90,7 @@
 
                 <div class="col-md-6">
                     <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" role="switch"
-                               name="can_view_reports" id="can_view_reports">
+                        <input class="form-check-input" type="checkbox" role="switch" name="can_view_reports" id="can_view_reports" {% if permissions.can_view_reports %}checked{% endif %}>
                         <label class="form-check-label" for="can_view_reports">
                             <i class="fa-solid fa-chart-line me-1"></i> Manejo de reportes
                         </label>
@@ -118,7 +102,7 @@
 
     <div class="d-flex gap-2">
         <button type="submit" class="btn btn-erp-primary text-white">
-            <i class="fa-solid fa-check me-1"></i> Crear usuario
+            <i class="fa-solid fa-check me-1"></i> Actualizar usuario
         </button>
         <a href="{% url 'users_list' %}" class="btn btn-outline-secondary">Cancelar</a>
     </div>

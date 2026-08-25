@@ -12,67 +12,76 @@
         <li class="nav-item">
             <a href="{% url 'dashboard' %}"
                class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                <i class="fa-solid fa-house"></i> Inicio
+                <i class="fa-solid fa-gauge-high me-2"></i> Inicio
             </a>
         </li>
 
-        <li class="nav-item">
-            <a href="{% url 'users_list' %}"
-               class="nav-link {% if request.resolver_match.url_name in 'users_list,users_create,users_edit,users_delete' %}active{% endif %}">
-                <i class="fa-solid fa-users-gear"></i> Gestionar usuarios
-            </a>
-        </li>
-
-        {% comment %}
+        {% if request.user.role == request.user.Role.ADMIN %}
+            <li class="nav-item">
+                <a href="{% url 'users_list' %}"
+                class="nav-link {% if request.resolver_match.url_name == 'users_list' %}active{% endif %}">
+                    <i class="fa-solid fa-users me-2"></i> Gestionar usuarios
+                </a>
+            </li>
+        {% endif %}
+        
         <li><hr class="text-white-50 my-2"></li>
+        
         <li class="nav-item px-3 pb-1">
             <span class="text-uppercase text-white-50 small fw-semibold">Operación</span>
         </li>
 
-        {% if request.user.role == request.user.Role.ADMIN or request.user.employeepermission.can_manage_inventory %}
-        <li class="nav-item">
-            <a href="{% url 'inventory_list' %}"
-               class="nav-link {% if request.resolver_match.url_name == 'inventory_list' %}active{% endif %}">
-                <i class="fa-solid fa-folder-open"></i> Inventario
-            </a>
-        </li>
+        {% comment %}
+
+        {% if request.user.role == request.user.Role.ADMIN or request.user.permissions.can_manage_inventory %}
+            <li class="nav-item">
+                <a href="{% url 'inventory_list' %}"
+                class="nav-link {% if request.resolver_match.url_name == 'inventory_list' %}active{% endif %}">
+                    <i class="fa-solid fa-boxes-stacked me-2"></i> Inventario
+                </a>
+            </li>
         {% endif %}
 
-        {% if request.user.role == request.user.Role.ADMIN or request.user.employeepermission.can_manage_sales %}
-        <li class="nav-item">
-            <a href="{% url 'sales_list' %}"
-               class="nav-link {% if request.resolver_match.url_name == 'sales_list' %}active{% endif %}">
-                <i class="fa-solid fa-tag"></i> Ventas
-            </a>
-        </li>
+        {% if request.user.role == request.user.Role.ADMIN or request.user.permissions.can_manage_sales %}
+            <li class="nav-item">
+                <a href="{% url 'sales_list' %}"
+                class="nav-link {% if request.resolver_match.url_name == 'sales_list' %}active{% endif %}">
+                    <i class="fa-solid fa-cart-shopping me-2"></i> Ventas
+                </a>
+            </li>
         {% endif %}
 
-        {% if request.user.role == request.user.Role.ADMIN or request.user.employeepermission.can_manage_employees %}
-        <li class="nav-item">
-            <a href="{% url 'employees_list' %}"
-               class="nav-link {% if request.resolver_match.url_name == 'employees_list' %}active{% endif %}">
-                <i class="fa-solid fa-address-book"></i> Empleados
-            </a>
-        </li>
+        {% if request.user.role == request.user.Role.ADMIN or request.user.permissions.can_manage_employees %}
+            <li class="nav-item">
+                <a href="{% url 'employees_list' %}"
+                class="nav-link {% if request.resolver_match.url_name == 'employees_list' %}active{% endif %}">
+                    <i class="fa-solid fa-id-badge me-2"></i> Empleados
+                </a>
+            </li>
         {% endif %}
 
-        {% if request.user.role == request.user.Role.ADMIN or request.user.employeepermission.can_view_reports %}
-        <li class="nav-item">
-            <a href="{% url 'reports' %}"
-               class="nav-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}">
-                <i class="fa-solid fa-bug"></i> Reportes
-            </a>
-        </li>
-        {% endif %} 
+        {% if request.user.role == request.user.Role.ADMIN or request.user.permissions.can_view_reports %}
+            <li class="nav-item">
+                <a href="{% url 'reports' %}"
+                class="nav-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}">
+                    <i class="fa-solid fa-chart-line me-2"></i> Reportes
+                </a>
+            </li>
+        {% endif %}
+
+        {% endcomment %}
 
         <li><hr class="text-white-50 my-2"></li>
+
+        {% comment %}
 
         <li class="nav-item">
             <a href="{% url 'company_info' %}"
                class="nav-link {% if request.resolver_match.url_name == 'company_info' %}active{% endif %}">
-                <i class="fa-solid fa-circle-info"></i> Info. compañía
+                <i class="fa-solid fa-building me-2"></i> Info. compañía
             </a>
         </li>
+
         {% endcomment %}
     </ul>
 
@@ -80,7 +89,7 @@
         <form id="logout-form" method="post" action="{% url 'logout' %}" class="m-0">
             {% csrf_token %}
             <button type="submit" class="nav-link nav-link-logout btn btn-link text-decoration-none text-white-50 w-100 text-start d-flex align-items-center border-0 px-3 py-2 rounded">
-                <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
+                <i class="fa-solid fa-right-from-bracket me-2"></i> Cerrar sesión
             </button>
         </form>
     </div>

@@ -3,7 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q, Case, When, Value, IntegerField
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from django.db import transaction, IntegrityError
 
 # Import forms
 from .forms import *
@@ -99,5 +100,83 @@ def userList_view(request):
     return render(request, "users/user_list.html", context)
 
 # Create users
+@login_required
 def create_user(request):
+    if request.method == "POST":
+        first_name = request.POST.get("first_name", "").strip()
+        last_name = request.POST.get("last_name", "").strip()
+        username = request.POST.get("username", "").strip()
+        email = request.POST.get("email", "").strip()
+        password = request.POST.get("password", "")
+        password2 = request.POST.get("password2", "")
+        role = request.POST.get("role", "")
+
+        # --- 1. Preliminary validations (without touching the database) ---
+        errors = []
+
+        if not username:
+            errors.append("El nombre del usuario es obligatorio.")
+        if not email:
+            errors.append("El correo electrónico es obligatorio.")
+        if not password:
+            errors.append("La contraseña es obligatoria.")
+        if password != password2:
+            errors.append("Las contraseñas no coinciden.")
+        if role not in ('manager', 'employee'):
+            errors.append("Selecciona un rol válido.")
+        if CustomUser.objects.filter(username=username).exists():
+            errors.append("Ese nombre de usuario ya está en uso.")
+        if CustomUser.objects.filter(email=email).exists():
+            errors.append("Ese correo ya está registrado.")
+
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+
+            # Re-render the form, preserving what has already been written (except passwords)
+            return render(request, 'users/create_users.html',{
+                'first_name': first_name,
+                'last_name': last_name,
+                'username': username,
+                'email': email,
+                'role': role
+            })
+
+        # --- 2. Creation within a transaction ---
+        try:
+            with transaction.atomic():
+                user = CustomUser.objects.create_user(
+                    email = email,
+                    username = username,
+                    password = password,
+                    first_name = first_name,
+                    last_name = last_name,
+                    company = request.user.company,
+                    role = role
+                )
+
+                EmployeePermission.objects.filter(user = user).update(
+                    can_manage_inventory='can_manage_inventory' in request.POST,
+                    can_manage_sales='can_manage_sales' in request.POST,
+                    can_manage_employees='can_manage_employees' in request.POST,
+                    can_view_reports='can_view_reports' in request.POST,
+                    granted_by=request.user,
+                )
+        except IntegrityError:
+            messages.error(request, "Ocurrió un error al crear al usuario. Intenta de nuevo.")
+            return render(request, 'users/create_users.html')
+
+        messages.success(request, f"Usuario {user.username} creado correctamente.")
+        return render(request, 'users/create_users.html')
     return render(request, 'users/create_users.html')
+
+@login_required
+def update_user(request, user_id):
+    employee = get_object_or_404(CustomUser, id=user_id)
+    permissions = EmployeePermission.objects.filter(user=employee).first()
+
+    context = {
+        "employee": employee,
+        "permissions": permissions
+    }
+    return render(request, 'users/update_user.html', context)
