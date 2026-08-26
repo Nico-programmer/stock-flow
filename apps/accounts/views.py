@@ -1,5 +1,8 @@
+# authenticator
 from django.contrib.auth import authenticate, login
-from django.contrib.auth.decorators import login_required
+
+# Decorators
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.views.decorators.http import require_POST
 
 from django.contrib import messages
@@ -57,6 +60,8 @@ def login_view(request):
 """------------------------------------------------------------------ Users View ------------------------------------------------------------------"""
 
 # User List
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
 def userList_view(request):
     query = request.GET.get('q', '').strip()
     role_filter = request.GET.get('role', '')
@@ -106,6 +111,7 @@ def userList_view(request):
 
 # Create users
 @login_required
+@user_passes_test(lambda u: u.is_superuser)
 def create_user(request):
     if request.method == "POST":
         first_name = request.POST.get("first_name", "").strip()
@@ -177,6 +183,7 @@ def create_user(request):
     return render(request, 'users/create_users.html')
 
 @login_required
+@user_passes_test(lambda u: u.is_superuser)
 def update_user(request, user_id):
     employee = get_object_or_404(CustomUser, id=user_id)
     permissions = EmployeePermission.objects.filter(user=employee).first()
@@ -241,6 +248,7 @@ def update_user(request, user_id):
 # Desactive user
 @login_required
 @require_POST
+@user_passes_test(lambda u: u.is_superuser)
 def deactivate_user(request, user_id):
     employee = get_object_or_404(CustomUser, id=user_id)
 
@@ -257,6 +265,7 @@ def deactivate_user(request, user_id):
 # Active user
 @login_required
 @require_POST
+@user_passes_test(lambda u: u.is_superuser)
 def activate_user(request, user_id):
     employee = get_object_or_404(CustomUser, id=user_id)
     employee.is_active = True

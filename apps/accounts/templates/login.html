@@ -37,7 +37,7 @@
 
                     {% if messages %}
                         {% for message in messages %}
-                            <div class="alert alert-{{ message.tags|default:'danger' }} py-2 small" role="alert">
+                            <div class="alert alert-danger py-2 small" role="alert">
                                 {{ message }}
                             </div>
                         {% endfor %}
