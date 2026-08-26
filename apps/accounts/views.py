@@ -1,9 +1,14 @@
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
+
 from django.contrib import messages
+
 from django.core.paginator import Paginator
 from django.db.models import Q, Case, When, Value, IntegerField
+
 from django.shortcuts import render, redirect, get_object_or_404
+
 from django.db import transaction, IntegrityError
 
 # Import forms
@@ -176,8 +181,86 @@ def update_user(request, user_id):
     employee = get_object_or_404(CustomUser, id=user_id)
     permissions = EmployeePermission.objects.filter(user=employee).first()
 
-    context = {
-        "employee": employee,
-        "permissions": permissions
-    }
+    context = {"employee": employee, "permissions": permissions}
+
+    if request.method == "POST":
+        first_name = request.POST.get("first_name", "").strip()
+        last_name = request.POST.get("last_name", "").strip()
+        username = request.POST.get("username", "").strip()
+        email = request.POST.get("email", "").strip()
+        role = request.POST.get("role", "")
+
+        # --- 1. Validaciones previas ---
+        errors = []
+
+        if not first_name:
+            errors.append("El nombre es obligatorio.")
+        if not last_name:
+            errors.append("El apellido es obligatorio.")
+        if not username:
+            errors.append("El nombre de usuario es obligatorio.")
+        if not email:
+            errors.append("El correo es obligatorio.")
+        if role not in ('manager', 'employee'):
+            errors.append("Selecciona un rol válido.")
+        if CustomUser.objects.filter(username=username).exclude(id=employee.id).exists():
+            errors.append("Ese nombre de usuario ya está en uso.")
+        if CustomUser.objects.filter(email=email).exclude(id=employee.id).exists():
+            errors.append("Ese correo ya está en uso.")
+
+        if errors:
+            messages.error(request, errors[0])
+            return render(request, 'users/update_user.html', context)
+
+        # --- 2. Actualización dentro de una transacción ---
+        try:
+            with transaction.atomic():
+                employee.first_name = first_name
+                employee.last_name = last_name
+                employee.username = username
+                employee.email = email
+                employee.role = role
+                employee.save()
+
+                EmployeePermission.objects.filter(user=employee).update(
+                    can_manage_inventory='can_manage_inventory' in request.POST,
+                    can_manage_sales='can_manage_sales' in request.POST,
+                    can_manage_employees='can_manage_employees' in request.POST,
+                    can_view_reports='can_view_reports' in request.POST,
+                    granted_by=request.user,
+                )
+        except IntegrityError:
+            messages.error(request, "Ocurrió un error al actualizar el usuario. Inténtalo de nuevo.")
+            return render(request, "users/update_user.html", context)
+
+        messages.success(request, f"El usuario {username} fue editado exitosamente.")
+        return redirect('users_list')
+
     return render(request, 'users/update_user.html', context)
+
+# Desactive user
+@login_required
+@require_POST
+def deactivate_user(request, user_id):
+    employee = get_object_or_404(CustomUser, id=user_id)
+
+    if employee.id == request.user.id:
+        messages.error(request, "No puedes desactivar tu propia cuenta.")
+        return redirect("users_list")
+
+    employee.is_active = False
+    employee.save()
+
+    messages.success(request, f"El usuario {employee.username} fue desactivado.")
+    return redirect("users_list")
+
+# Active user
+@login_required
+@require_POST
+def activate_user(request, user_id):
+    employee = get_object_or_404(CustomUser, id=user_id)
+    employee.is_active = True
+    employee.save()
+
+    messages.success(request, f"El usuario {employee.username} fue reactivado.")
+    return redirect("users_list")

@@ -129,14 +129,28 @@
 
                                 <!-- Actions -->
                                 <div class="ms-auto flex-shrink-0">
-                                    <a href="{% url "update_user" user.id %}" class="btn btn-sm btn-outline-secondary" title="Actualizar">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </a>
-                                    <a href="#" class="btn btn-sm btn-outline-danger" title="Eliminar">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </a>
-                                </div>
+                                    {% if user.is_active %}
+                                        <a href="{% url 'update_user' user.id %}" class="btn btn-sm btn-outline-secondary" title="Actualizar">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </a>
 
+                                        <form method="POST" action="{% url 'deactivate_user' user.id %}" onsubmit="return confirm('¿Seguro que deseas desactivar a este usuario?');" style="display:inline;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Desactivar">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <span class="badge rounded-pill text-bg-secondary me-1">Usuario inactivo</span>
+
+                                        <form method="POST" action="{% url 'activate_user' user.id %}" onsubmit="return confirm('¿Deseas reactivar a este usuario?');" style="display:inline;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-success" title="Reactivar">
+                                                <i class="fa-solid fa-rotate-left"></i>
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
                             </div>
                         </li>
                         {% endfor %}
