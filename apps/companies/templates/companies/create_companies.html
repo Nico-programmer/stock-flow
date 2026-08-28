@@ -13,12 +13,15 @@
             <p class="text-muted mb-0">Completa los datos y crea una nueva empresa.</p>
         </div>
     </div>
-
+ 
     <form method="POST">
+ 
+        {% csrf_token %}
+ 
         <div class="card border-0 shadow-sm mb-3">
             <div class="card-body">
                 <h6 class="text-uppercase text-muted small fw-semibold mb-3">Datos de empresa</h6>
-
+ 
                 {% if messages %}
                     {% for message in messages %}
                         <div class="alert alert-danger py-2 small" role="alert">
@@ -26,33 +29,78 @@
                         </div>
                     {% endfor %}
                 {% endif %}
-
+ 
                 <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="name" class="form-label">Nombre</label>
-                        <input type="text" class="form-control" id="name" name="name" placeholder="Ingresa el nombre de la empresa">
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="phone" class="form-label">Número de teléfono</label>
-                        <input type="text" class="form-control" id="phone" name="phone" placeholder="Ingresa el número de teléfono">
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="address" class="form-label">Dirección de la empresa</label>
-                        <input type="text" class="form-control" id="address" name="address" placeholder="Ingresa la dirección de la empresa">
+                    <div class="col-md-12">
+                        <label for="address" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="name" name="name" placeholder="Ingresa el nombre de la empresa" value="{{ name|default:'' }}">
                     </div>
                 </div>
             </div>
         </div>
-
+ 
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="text-uppercase text-muted small fw-semibold mb-0">Sucursales</h6>
+                    <button type="button" id="add-branch" class="btn btn-sm btn-outline-primary">
+                        <i class="fa-solid fa-plus me-1"></i> Agregar sucursal
+                    </button>
+                </div>
+ 
+                <div id="branches-container">
+                    <div class="branch-row row g-3 align-items-end mb-2">
+                        <div class="col-md-4">
+                            <label class="form-label">Nombre de la sucursal</label>
+                            <input type="text" class="form-control" name="branch_name[]" placeholder="Ej. Sucursal Centro">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text" class="form-control" name="branch_phone[]" placeholder="Teléfono">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Dirección</label>
+                            <input type="text" class="form-control" name="branch_address[]" placeholder="Dirección">
+                        </div>
+                        <div class="col-md-1 d-grid">
+                            <button type="button" class="btn btn-outline-danger remove-branch" title="Quitar sucursal">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+ 
+                <template id="branch-row-template">
+                    <div class="branch-row row g-3 align-items-end mb-2">
+                        <div class="col-md-4">
+                            <label class="form-label">Nombre de la sucursal</label>
+                            <input type="text" class="form-control" name="branch_name[]" placeholder="Ej. Sucursal Centro">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text" class="form-control" name="branch_phone[]" placeholder="Teléfono">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Dirección</label>
+                            <input type="text" class="form-control" name="branch_address[]" placeholder="Dirección">
+                        </div>
+                        <div class="col-md-1 d-grid">
+                            <button type="button" class="btn btn-outline-danger remove-branch" title="Quitar sucursal">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+ 
         <div class="card border-0 shadow-sm mb-3">
             <div class="card-body">
                 <h6 class="text-uppercase text-muted small fw-semibold mb-3">Asignar estado</h6>
-
+ 
                 <div class="col-md-6">
                     <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" role="switch" name="is_active" id="is_active">
+                        <input class="form-check-input" type="checkbox" role="switch" name="is_active" id="is_active" {% if is_active %} checked {% endif %}>
                         <label class="form-check-label" for="is_active">
                             <i class="fa-solid fa-power-off"></i> Esta activa
                         </label>
@@ -60,13 +108,15 @@
                 </div>
             </div>
         </div>
-
+ 
         <div class="d-flex gap-2">
             <button type="submit" class="btn btn-erp-primary text-white">
                 <i class="fa-solid fa-check me-1"></i> Crear empresa
             </button>
-
+ 
             <a href="{% url "companies_list" %}" class="btn btn-outline-secondary">Cancelar</a>
         </div>
     </form>
+
+    <script src="{% static "js/create_companies.script.js" %}"></script>
 {% endblock %}

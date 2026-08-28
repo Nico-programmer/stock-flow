@@ -30,9 +30,9 @@ def companies_list(request):
     if query:
         companies = companies.filter(
             Q(name__icontains = query) |
-            Q(address__icontains = query) |
-            Q(phone_number__icontains = query)
-        )
+            Q(branches__address__icontains = query) |
+            Q(branches__phone_number__icontains = query)
+        ).distinct() # Required: Without this, a company with multiple matching branches appears duplicated
 
     if status_filter == 'active':
         companies = companies.filter(is_active=True)
@@ -56,26 +56,27 @@ def companies_list(request):
 @login_required
 @superuser_required
 def create_companies(request):
-    # Obtain companies
-    companies = Company.objects.all()
-
     if request.method == 'POST':
         name = request.POST.get("name", "").strip()
+        is_active = "is_active" in request.POST
+
+        branch_name = request.POST.get("branch_name", "").strip()
         phone = request.POST.get("phone", "").strip()
         address = request.POST.get("address", "").strip()
-        is_active = request.POST.get("is_active", "")
 
-        # --- 1. Preliminary validations (without touching the database) ---
+        # --- 1. Preliminary validations ---
         errors = []
 
         if not name:
             errors.append("El nombre es obligatorio.")
-        elif not phone:
+        if not branch_name:
+            errors.append("El nombre de la sucursal es obligatorio.")
+        if not phone:
             errors.append("El número de teléfono es obligatorio.")
-        elif not address:
+        if not address:
             errors.append("La dirección es obligatorio.")
-        elif name == companies.name:
-            errors.append("El nombre de la compañia ya existe.")
+        if Company.objects.filter(name=name).exists():
+            errors.append("El nombre de la compañía ya existe.")
 
         if errors:
             messages.error(request, errors[0])
@@ -83,6 +84,7 @@ def create_companies(request):
             # The form is re-rendered with the existing text and the company queryset intact.
             return render(request, 'companies/create_companies.html', {
                 'name': name,
+                'branch_name': branch_name,
                 'phone': phone,
                 'address': address,
                 'is_active': is_active
@@ -93,9 +95,14 @@ def create_companies(request):
             with transaction.atomic():
                 company = Company.objects.create(
                     name = name,
-                    phone = phone,
-                    address = address,
                     is_active = is_active
+                )
+
+                Branch.objects.create(
+                    company = company,
+                    name = branch_name,
+                    phone_number = phone,
+                    address = address
                 )
         except IntegrityError:
             messages.error(request, 'Ocurrió un error al crear la empresa. Intenta de nuevo.')

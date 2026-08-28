@@ -69,9 +69,11 @@
                             <!-- Nombre y datos -->
                             <div class="flex-grow-1" style="min-width: 180px;">
                                 <div class="fw-semibold">{{ c.name }}</div>
-                                <div class="small text-muted">
-                                    {{ c.address|default:"Sin dirección" }} · {{ c.phone_number|default:"Sin teléfono" }}
-                                </div>
+                                {% with first_branch=c.branches.first %}
+                                    <div class="small text-muted">
+                                        {{ first_branch.address|default:"Sin sucursales" }} · {{ first_branch.phone_number|default:"" }}
+                                    </div>
+                                {% endwith %}
                             </div>
 
                             <!-- Estado -->
