@@ -3,6 +3,7 @@ from django.db import models
 """ Company Model — the business entity, unique """
 class Company(models.Model):
     name = models.CharField(max_length=150, verbose_name="Nombre de la empresa")
+    phone_number = models.CharField(max_length=20, blank=True, verbose_name="Teléfono")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de creación")
     is_active = models.BooleanField(default=True, verbose_name="Activo")
 
@@ -17,7 +18,6 @@ class Company(models.Model):
 class Branch(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="branches", verbose_name="Empresa")
     name = models.CharField(max_length=100, blank=True, verbose_name="Nombre de la sucursal")
-    phone_number = models.CharField(max_length=20, blank=True, verbose_name="Teléfono")
     address = models.CharField(max_length=250, blank=True, verbose_name="Dirreción")
     is_active = models.BooleanField(default=True, verbose_name="Activo")
 

@@ -31,9 +31,14 @@
                 {% endif %}
  
                 <div class="row g-3">
-                    <div class="col-md-12">
+                    <div class="col-md-6">
                         <label for="address" class="form-label">Nombre</label>
                         <input type="text" class="form-control" id="name" name="name" placeholder="Ingresa el nombre de la empresa" value="{{ name|default:'' }}">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="phone" class="form-label">Teléfono</label>
+                        <input type="text" class="form-control" id="phone" name="phone" placeholder="Ingresa el número de teléfono de la empresa" value="{{ name|default:'' }}">
                     </div>
                 </div>
             </div>
@@ -54,10 +59,6 @@
                             <label class="form-label">Nombre de la sucursal</label>
                             <input type="text" class="form-control" name="branch_name[]" placeholder="Ej. Sucursal Centro">
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Teléfono</label>
-                            <input type="text" class="form-control" name="branch_phone[]" placeholder="Teléfono">
-                        </div>
                         <div class="col-md-4">
                             <label class="form-label">Dirección</label>
                             <input type="text" class="form-control" name="branch_address[]" placeholder="Dirección">
@@ -75,10 +76,6 @@
                         <div class="col-md-4">
                             <label class="form-label">Nombre de la sucursal</label>
                             <input type="text" class="form-control" name="branch_name[]" placeholder="Ej. Sucursal Centro">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Teléfono</label>
-                            <input type="text" class="form-control" name="branch_phone[]" placeholder="Teléfono">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Dirección</label>

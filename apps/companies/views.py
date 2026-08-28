@@ -31,7 +31,7 @@ def companies_list(request):
         companies = companies.filter(
             Q(name__icontains = query) |
             Q(branches__address__icontains = query) |
-            Q(branches__phone_number__icontains = query)
+            Q(phone_number__icontains = query)
         ).distinct() # Required: Without this, a company with multiple matching branches appears duplicated
 
     if status_filter == 'active':
@@ -58,25 +58,40 @@ def companies_list(request):
 def create_companies(request):
     if request.method == 'POST':
         name = request.POST.get("name", "").strip()
+        phone = request.POST.get("phone", "").strip()
         is_active = "is_active" in request.POST
 
-        branch_name = request.POST.get("branch_name", "").strip()
-        phone = request.POST.get("phone", "").strip()
-        address = request.POST.get("address", "").strip()
+        # getlist() returns a list with all the values ​​of that "name"
+        branch_name = request.POST.getlist("branch_name[]")
+        branch_addresses  = request.POST.getlist("branch_address[]")
 
         # --- 1. Preliminary validations ---
         errors = []
 
         if not name:
             errors.append("El nombre es obligatorio.")
-        if not branch_name:
-            errors.append("El nombre de la sucursal es obligatorio.")
         if not phone:
-            errors.append("El número de teléfono es obligatorio.")
-        if not address:
-            errors.append("La dirección es obligatorio.")
-        if Company.objects.filter(name=name).exists():
+            errors.append("El teléfono es obligatorio.")
+        if name and Company.objects.filter(name=name).exists():
             errors.append("El nombre de la compañía ya existe.")
+
+        # Verify that there is at least one branch with data
+        valid_branches = [
+            (n.strip(), a.strip())
+            for n, a in zip(branch_name, branch_addresses)
+            if n.strip() or a.strip()
+        ]
+
+        if not valid_branches:
+            errors.append("Debes agregar al menos una sucursal.")
+        else:
+            for n, a in valid_branches:
+                if not n:
+                    errors.append("Todas las sucursales deben tener un nombre.")
+                    break
+                if not a:
+                    errors.append("Todas las sucursales deben tener una dirección.")
+                    break
 
         if errors:
             messages.error(request, errors[0])
@@ -86,7 +101,7 @@ def create_companies(request):
                 'name': name,
                 'branch_name': branch_name,
                 'phone': phone,
-                'address': address,
+                'address': branch_addresses,
                 'is_active': is_active
             })
 
@@ -95,15 +110,16 @@ def create_companies(request):
             with transaction.atomic():
                 company = Company.objects.create(
                     name = name,
+                    phone_number = phone,
                     is_active = is_active
                 )
 
-                Branch.objects.create(
-                    company = company,
-                    name = branch_name,
-                    phone_number = phone,
-                    address = address
-                )
+                for b_name, b_address in valid_branches:
+                    Branch.objects.create(
+                        company = company,
+                        name = b_name,
+                        address = b_address,
+                    )
         except IntegrityError:
             messages.error(request, 'Ocurrió un error al crear la empresa. Intenta de nuevo.')
             return render(request, 'companies/create_companies.html')
