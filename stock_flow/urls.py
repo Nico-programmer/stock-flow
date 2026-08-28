@@ -26,6 +26,7 @@ urlpatterns = [
     # Core
     path('', include('apps.accounts.urls')),
     path('home/', include('apps.core.urls')),
+    path('companies/', include('apps.companies.urls')),
 ]
 
 if settings.DEBUG:

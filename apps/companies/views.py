@@ -1,3 +1,10 @@
 from django.shortcuts import render
 
-# Create your views here.
+# Decorators
+from django.contrib.auth.decorators import login_required
+from apps.accounts.decorators import superuser_required
+
+@login_required
+@superuser_required
+def companies_list(request):
+    return render(request, "companies.html")

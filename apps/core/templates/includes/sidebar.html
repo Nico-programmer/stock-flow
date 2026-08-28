@@ -19,6 +19,17 @@
         {% if request.user.is_superuser %}
             {% if request.user.role == request.user.Role.ADMIN %}
                 <li class="nav-item">
+                    <a href="{% url 'companies_list' %}"
+                    class="nav-link {% if request.resolver_match.url_name == 'companies_list' %}active{% endif %}">
+                        <i class="fa-solid fa-suitcase"></i> Gestionar compañias
+                    </a>
+                </li>
+            {% endif %}
+        {% endif %}
+
+        {% if request.user.is_superuser %}
+            {% if request.user.role == request.user.Role.ADMIN %}
+                <li class="nav-item">
                     <a href="{% url 'users_list' %}"
                     class="nav-link {% if request.resolver_match.url_name == 'users_list' %}active{% endif %}">
                         <i class="fa-solid fa-users me-2"></i> Gestionar usuarios
