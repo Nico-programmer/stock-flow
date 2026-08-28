@@ -109,7 +109,7 @@ AUTH_USER_MODEL = 'accounts.CustomUser'
 
 LANGUAGE_CODE = 'es'
 
-TIME_ZONE = 'Bogota/America'
+TIME_ZONE = 'America/Bogota'
 
 USE_I18N = True
 
