@@ -31,6 +31,18 @@
 
             <div class="row g-3">
                 <div class="col-md-6">
+                    <label for="role" class="form-label">Empresa</label>
+                    <select name="role" id="role" class="form-select">
+                        <option value="" disabled {% if not employee.role %}selected{% endif %}>Selecciona el rol del empleado</option>
+                        {% for value, label in roles %}
+                            {% if value != "admin" %}
+                                <option value="{{ value }}" {% if employee.role == value %}selected{% endif %}>{{ label }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-6">
                     <label for="first_name" class="form-label">Nombres</label>
                     <input type="text" id="first_name" name="first_name" class="form-control"
                            placeholder="Nombre del usuario" value="{{ first_name|default:'' }}">
@@ -77,9 +89,12 @@
                 <div class="col-md-6">
                     <label for="role" class="form-label">Rol</label>
                     <select name="role" id="role" class="form-select">
-                        <option value="" disabled {% if not role %}selected{% endif %}>Selecciona el rol del empleado</option>
-                        <option value="manager" {% if role == "manager" %}selected{% endif %}>Manager</option>
-                        <option value="employee" {% if role == "employee" %}selected{% endif %}>Empleado</option>
+                        <option value="" disabled {% if not employee.role %}selected{% endif %}>Selecciona el rol del empleado</option>
+                        {% for value, label in roles %}
+                            {% if value != "admin" %}
+                                <option value="{{ value }}" {% if employee.role == value %}selected{% endif %}>{{ label }}</option>
+                            {% endif %}
+                        {% endfor %}
                     </select>
                 </div>
             </div>
