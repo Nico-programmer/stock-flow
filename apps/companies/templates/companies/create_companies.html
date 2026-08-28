@@ -1,0 +1,72 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Crear una empresa{% endblock %}
+
+{% block content %}
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a href="{% url 'companies_list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fa-solid fa-arrow-left"></i>
+        </a>
+        <div>
+            <h2 class="fw-semibold mb-0">Crear una nueva empresa</h2>
+            <p class="text-muted mb-0">Completa los datos y crea una nueva empresa.</p>
+        </div>
+    </div>
+
+    <form method="POST">
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="text-uppercase text-muted small fw-semibold mb-3">Datos de empresa</h6>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-danger py-2 small" role="alert">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="name" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="name" name="name" placeholder="Ingresa el nombre de la empresa">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="phone" class="form-label">Número de teléfono</label>
+                        <input type="text" class="form-control" id="phone" name="phone" placeholder="Ingresa el número de teléfono">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="address" class="form-label">Dirección de la empresa</label>
+                        <input type="text" class="form-control" id="address" name="address" placeholder="Ingresa la dirección de la empresa">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="text-uppercase text-muted small fw-semibold mb-3">Asignar estado</h6>
+
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" name="is_active" id="is_active">
+                        <label class="form-check-label" for="is_active">
+                            <i class="fa-solid fa-power-off"></i> Esta activa
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-erp-primary text-white">
+                <i class="fa-solid fa-check me-1"></i> Crear empresa
+            </button>
+
+            <a href="{% url "companies_list" %}" class="btn btn-outline-secondary">Cancelar</a>
+        </div>
+    </form>
+{% endblock %}

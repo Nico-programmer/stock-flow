@@ -10,6 +10,7 @@ from django.contrib import messages
 
 # Import paginator
 from django.core.paginator import Paginator
+from django.core.exceptions import ValidationError
 from django.db.models import Q, Case, When, Value, IntegerField
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -68,11 +69,11 @@ def userList_view(request):
     query = request.GET.get('q', '').strip()
     role_filter = request.GET.get('role', '')
     permission_filter = request.GET.get('permission', '')
-    company_filter = request.GET.get('company', '')  # nuevo filtro
+    company_filter = request.GET.get('company', '')
 
     users = (
         CustomUser.objects
-        .select_related('permissions', 'company')  # se agrega company para evitar N+1 queries al mostrar el nombre
+        .select_related('permissions', 'company')  # The company name is added to avoid N+1 queries when displaying the name
     )
 
     if query:
@@ -90,11 +91,11 @@ def userList_view(request):
         users = users.filter(**{f'permissions__{permission_filter}': True})
 
     if company_filter:
-        # company_filter llega como el id de la compañía seleccionada
+        # company_filter arrives as the id of the selected company
         users = users.filter(company_id=company_filter)
 
-    # Orden: primero por nombre de compañía (para que regroup funcione en el template),
-    # luego el orden fijo de rol, luego nombre
+    # Order: first by company name (so that regroup works in the template),
+    # then the fixed role order, then name
     users = users.annotate(
         role_order=Case(
             When(role=CustomUser.Role.ADMIN, then=Value(0)),
@@ -113,19 +114,19 @@ def userList_view(request):
         'role_filter': role_filter,
         'permission_filter': permission_filter,
         'company_filter': company_filter,
-        'companies': Company.objects.all(),  # para poblar el <select> del filtro
+        'companies': Company.objects.all(),  # to populate the <select> of the filter
     }
     return render(request, "users/user_list.html", context)
 
 # Create users
 @login_required
-@superuser_required  # Solo el superusuario de la plataforma gestiona usuarios
+@superuser_required
 def create_user(request):
-    # Queryset de empresas para poblar el <select> del formulario
-    companies_qs = Company.objects.all()
+    # Now you choose the branch, not the company.
+    branches_qs = Branch.objects.filter(is_active=True)
 
     if request.method == "POST":
-        company_id = request.POST.get("company", "").strip()
+        branch_id = request.POST.get("branch", "").strip()
         first_name = request.POST.get("first_name", "").strip()
         last_name = request.POST.get("last_name", "").strip()
         username = request.POST.get("username", "").strip()
@@ -134,11 +135,10 @@ def create_user(request):
         password2 = request.POST.get("password2", "")
         role = request.POST.get("role", "")
 
-        # --- 1. Validaciones previas (sin tocar la BD) ---
         errors = []
 
-        if not company_id:
-            errors.append("Selecciona la compañía a la que pertenece el usuario.")
+        if not branch_id:
+            errors.append("Selecciona la sucursal a la que pertenece el usuario.")
         if not first_name:
             errors.append("El nombre es obligatorio.")
         if not last_name:
@@ -160,9 +160,8 @@ def create_user(request):
 
         if errors:
             messages.error(request, errors[0])
-            # Se re-renderiza el form con lo ya escrito y el queryset de empresas intacto
             return render(request, 'users/create_users.html', {
-                'company': companies_qs,
+                'branch': branches_qs,
                 'first_name': first_name,
                 'last_name': last_name,
                 'username': username,
@@ -170,21 +169,22 @@ def create_user(request):
                 'role': role,
             })
 
-        # Se valida que la empresa seleccionada exista de verdad
-        company_obj = get_object_or_404(Company, id=company_id)
+        branch_obj = get_object_or_404(Branch, id=branch_id)
 
-        # --- 2. Creación dentro de una transacción ---
         try:
             with transaction.atomic():
-                user = CustomUser.objects.create_user(
-                    email=email,
+                # The object is built WITHOUT saving yet (set_password + full_clean first)
+                user = CustomUser(
+                    email=CustomUser.objects.normalize_email(email),
                     username=username,
-                    password=password,
                     first_name=first_name,
                     last_name=last_name,
-                    company=company_obj,  # objeto Company, no string
+                    branch=branch_obj,
                     role=role,
                 )
+                user.set_password(password)   # Hash the password before validating/saving
+                user.full_clean()             # ← Here your clean() validation is executed
+                user.save()                   # It is only here that it is saved in the database
 
                 EmployeePermission.objects.filter(user=user).update(
                     can_manage_inventory='can_manage_inventory' in request.POST,
@@ -193,20 +193,21 @@ def create_user(request):
                     can_view_reports='can_view_reports' in request.POST,
                     granted_by=request.user,
                 )
-        except IntegrityError:
+        except (IntegrityError, ValidationError):
             messages.error(request, "Ocurrió un error al crear al usuario. Intenta de nuevo.")
-            return render(request, 'users/create_users.html', {'company': companies_qs})
+            return render(request, 'users/create_users.html', {'branch': branches_qs})
 
-        return redirect('users_list')  # Post/Redirect/Get: evita reenvío duplicado
+        messages.success(request, f"Usuario {user.username} creado correctamente.")
+        return redirect('users_list')
 
-    return render(request, 'users/create_users.html', {'company': companies_qs})
+    return render(request, 'users/create_users.html', {'branch': branches_qs})
 
 @login_required
 @superuser_required
 def update_user(request, user_id):
     employee = get_object_or_404(CustomUser, id=user_id)
     permissions = EmployeePermission.objects.filter(user=employee).first()
-    companies_qs = Company.objects.all()  # nombre distinto para no chocar con el POST
+    companies_qs = Company.objects.all()  # different name to avoid conflicting with the POST
 
     context = {
         "employee": employee,
@@ -223,7 +224,7 @@ def update_user(request, user_id):
         email = request.POST.get("email", "").strip()
         role = request.POST.get("role", "")
 
-        # --- 1. Validaciones previas ---
+        # --- 1. Prior validations ---
         errors = []
 
         if not company_id:
@@ -247,10 +248,10 @@ def update_user(request, user_id):
             messages.error(request, errors[0])
             return render(request, 'users/update_user.html', context)
 
-        # Se valida que la compañía seleccionada exista de verdad
+        # It is verified that the selected company actually exists
         company_obj = get_object_or_404(Company, id=company_id)
 
-        # --- 2. Actualización dentro de una transacción ---
+        # --- 2. Update within a transaction ---
         try:
             with transaction.atomic():
                 employee.first_name = first_name
@@ -258,7 +259,7 @@ def update_user(request, user_id):
                 employee.username = username
                 employee.email = email
                 employee.role = role
-                employee.company = company_obj  # ← faltaba asignar la compañía
+                employee.company = company_obj
                 employee.save()
 
                 EmployeePermission.objects.filter(user=employee).update(
@@ -284,7 +285,6 @@ def deactivate_user(request, user_id):
     employee = get_object_or_404(CustomUser, id=user_id)
 
     if employee.id == request.user.id:
-        messages.error(request, "No puedes desactivar tu propia cuenta.")
         return redirect("users_list")
 
     employee.is_active = False

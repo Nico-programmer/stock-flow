@@ -4,6 +4,9 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.utils import timezone
 
+# Import Exceptions
+from django.core.exceptions import ValidationError
+
 """ Custom User Management Tool """
 class CustomUserManager(BaseUserManager):
     # Function to create a user
@@ -61,13 +64,22 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     last_name = models.CharField(max_length=150, blank=True, null=True, verbose_name="Apellidos")
     phone_number = models.CharField(max_length=20, blank=True, null=True, verbose_name="Teléfono")
 
-    # Company
+    # Company-wide: only applies if role == 'admin'
     company = models.ForeignKey(
         'companies.Company',
         on_delete=models.SET_NULL,
         null=True, blank=True,
+        related_name='admins',
+        verbose_name="Empresa (solo administrador)"
+    )
+
+    # Specific branch: only applies if role in ('manager', 'employee')
+    branch = models.ForeignKey(
+        'companies.Branch',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
         related_name='employees',
-        verbose_name="Empresa"
+        verbose_name="Sucursal (gerente/empleado)"
     )
 
     # Role
@@ -92,6 +104,12 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     def get_short_name(self):
         return self.first_name or self.username
 
+    def clean(self):
+        if self.role == self.Role.ADMIN and self.branch_id:
+            raise ValidationError("Un administrador no debe tener una sucursal asignada, solo una empresa.")
+        if self.role != self.Role.ADMIN and self.company_id:
+            raise ValidationError("Solo el administrador puede estar asignado directamente a una empresa.")
+
     """ Function to display the field name and information in the Django admin """
     def __str__(self):
         return f'{self.email} - {self.username}'
@@ -108,11 +126,11 @@ class EmployeePermission(models.Model):
         related_name="permissions",
         verbose_name="Usuario"
     )
-    company = models.ForeignKey(
-        'companies.Company',
+    branch = models.ForeignKey(
+        'companies.Branch',
         on_delete=models.CASCADE,
-        related_name="employee_permissions",
-        verbose_name="Empresa"
+        related_name='employee_permissions',
+        verbose_name="Sucursal"
     )
 
     can_manage_inventory = models.BooleanField(default=False, verbose_name="Gestionar inventario")
