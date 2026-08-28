@@ -5,4 +5,14 @@
     Actualizar empresa
 {% endblock %}
 
-{% block content %}{% endblock %}
+{% block content %}
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a href="{% url 'companies_list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fa-solid fa-arrow-left"></i>
+        </a>
+        <div>
+            <h2 class="fw-semibold mb-0">Actualiza la empresa</h2>
+            <p class="text-muted mb-0">Actualiza la empresa y las sucursales.</p>
+        </div>
+    </div>
+{% endblock %}

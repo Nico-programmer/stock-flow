@@ -126,3 +126,10 @@ def create_companies(request):
 
         return redirect('companies_list') # Post/Redirect/Get: avoids duplicate forwarding    
     return render(request, 'companies/create_companies.html')
+
+# Update companies
+@login_required
+@superuser_required
+def update_companies(request, companies_id):
+    companies = Company.objects.filter(id=companies_id)
+    return render(request, "companies/update_companies.html", {'companies': companies})
