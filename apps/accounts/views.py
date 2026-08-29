@@ -118,14 +118,14 @@ def userList_view(request):
     }
     return render(request, "users/user_list.html", context)
 
-# Create users
 @login_required
 @superuser_required
 def create_user(request):
-    # Now you choose the branch, not the company.
-    branches_qs = Branch.objects.filter(is_active=True)
+    companies_qs = Company.objects.filter(is_active=True)
+    roles = CustomUser.Role.choices
 
     if request.method == "POST":
+        company_id = request.POST.get("company", "").strip()
         branch_id = request.POST.get("branch", "").strip()
         first_name = request.POST.get("first_name", "").strip()
         last_name = request.POST.get("last_name", "").strip()
@@ -137,8 +137,10 @@ def create_user(request):
 
         errors = []
 
+        if not company_id:
+            errors.append("Selecciona la empresa.")
         if not branch_id:
-            errors.append("Selecciona la sucursal a la que pertenece el usuario.")
+            errors.append("Selecciona la sucursal.")
         if not first_name:
             errors.append("El nombre es obligatorio.")
         if not last_name:
@@ -161,19 +163,19 @@ def create_user(request):
         if errors:
             messages.error(request, errors[0])
             return render(request, 'users/create_users.html', {
-                'branch': branches_qs,
+                'companies': companies_qs,
                 'first_name': first_name,
                 'last_name': last_name,
                 'username': username,
                 'email': email,
-                'role': role,
+                'roles': roles,
             })
 
-        branch_obj = get_object_or_404(Branch, id=branch_id)
+        # La sucursal debe pertenecer realmente a la empresa seleccionada
+        branch_obj = get_object_or_404(Branch, id=branch_id, company_id=company_id, is_active=True)
 
         try:
             with transaction.atomic():
-                # The object is built WITHOUT saving yet (set_password + full_clean first)
                 user = CustomUser(
                     email=CustomUser.objects.normalize_email(email),
                     username=username,
@@ -182,53 +184,56 @@ def create_user(request):
                     branch=branch_obj,
                     role=role,
                 )
-                user.set_password(password)   # Hash the password before validating/saving
-                user.full_clean()             # ← Here your clean() validation is executed
-                user.save()                   # It is only here that it is saved in the database
+                user.set_password(password)
+                user.full_clean()
+                user.save()
 
-                EmployeePermission.objects.filter(user=user).update(
-                    can_manage_inventory='can_manage_inventory' in request.POST,
-                    can_manage_sales='can_manage_sales' in request.POST,
-                    can_manage_employees='can_manage_employees' in request.POST,
-                    can_view_reports='can_view_reports' in request.POST,
-                    granted_by=request.user,
+                EmployeePermission.objects.update_or_create(
+                    user=user,
+                    defaults={
+                        'branch': user.branch,
+                        'can_manage_inventory': 'can_manage_inventory' in request.POST,
+                        'can_manage_sales': 'can_manage_sales' in request.POST,
+                        'can_manage_employees': 'can_manage_employees' in request.POST,
+                        'can_view_reports': 'can_view_reports' in request.POST,
+                        'granted_by': request.user,
+                    }
                 )
         except (IntegrityError, ValidationError):
             messages.error(request, "Ocurrió un error al crear al usuario. Intenta de nuevo.")
-            return render(request, 'users/create_users.html', {'branch': branches_qs})
+            return render(request, 'users/create_users.html', {'companies': companies_qs, 'roles': roles,})
 
         messages.success(request, f"Usuario {user.username} creado correctamente.")
         return redirect('account:list')
 
-    return render(request, 'users/create_users.html', {'branch': branches_qs})
+    return render(request, 'users/create_users.html', {'companies': companies_qs, 'roles': roles,})
 
 @login_required
 @superuser_required
 def update_user(request, user_id):
     employee = get_object_or_404(CustomUser, id=user_id)
     permissions = EmployeePermission.objects.filter(user=employee).first()
-    companies_qs = Company.objects.all()  # different name to avoid conflicting with the POST
+    companies_qs = Company.objects.filter(is_active=True)
 
     context = {
         "employee": employee,
         "permissions": permissions,
         "company": companies_qs,
-        "roles": CustomUser.Role.choices,  # [('admin', 'Administrador'), ('manager', 'Gerente'), ('employee', 'Empleado')],
+        "roles": CustomUser.Role.choices,
     }
 
     if request.method == "POST":
-        company_id = request.POST.get("company", "").strip()
+        branch_id = request.POST.get("branch", "").strip()
         first_name = request.POST.get("first_name", "").strip()
         last_name = request.POST.get("last_name", "").strip()
         username = request.POST.get("username", "").strip()
         email = request.POST.get("email", "").strip()
         role = request.POST.get("role", "")
 
-        # --- 1. Prior validations ---
         errors = []
 
-        if not company_id:
-            errors.append("Selecciona la compañía a la que pertenece el usuario.")
+        if not branch_id:
+            errors.append("Selecciona la sucursal a la que pertenece el usuario.")
         if not first_name:
             errors.append("El nombre es obligatorio.")
         if not last_name:
@@ -248,10 +253,8 @@ def update_user(request, user_id):
             messages.error(request, errors[0])
             return render(request, 'users/update_user.html', context)
 
-        # It is verified that the selected company actually exists
-        company_obj = get_object_or_404(Company, id=company_id)
+        branch_obj = get_object_or_404(Branch, id=branch_id, is_active=True)
 
-        # --- 2. Update within a transaction ---
         try:
             with transaction.atomic():
                 employee.first_name = first_name
@@ -259,20 +262,26 @@ def update_user(request, user_id):
                 employee.username = username
                 employee.email = email
                 employee.role = role
-                employee.company = company_obj
+                employee.branch = branch_obj
+                employee.full_clean()
                 employee.save()
 
-                EmployeePermission.objects.filter(user=employee).update(
-                    can_manage_inventory='can_manage_inventory' in request.POST,
-                    can_manage_sales='can_manage_sales' in request.POST,
-                    can_manage_employees='can_manage_employees' in request.POST,
-                    can_view_reports='can_view_reports' in request.POST,
-                    granted_by=request.user,
+                EmployeePermission.objects.update_or_create(
+                    user=employee,
+                    defaults={
+                        'branch': branch_obj,
+                        'can_manage_inventory': 'can_manage_inventory' in request.POST,
+                        'can_manage_sales': 'can_manage_sales' in request.POST,
+                        'can_manage_employees': 'can_manage_employees' in request.POST,
+                        'can_view_reports': 'can_view_reports' in request.POST,
+                        'granted_by': request.user,
+                    }
                 )
-        except IntegrityError:
+        except (IntegrityError, ValidationError):
             messages.error(request, "Ocurrió un error al actualizar el usuario. Inténtalo de nuevo.")
             return render(request, "users/update_user.html", context)
 
+        messages.success(request, f"El usuario {username} fue editado exitosamente.")
         return redirect('account:list')
 
     return render(request, 'users/update_user.html', context)

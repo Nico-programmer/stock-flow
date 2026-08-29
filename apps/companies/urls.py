@@ -14,4 +14,7 @@ urlpatterns = [
     # Active/Inactive Branch
     path('branch-active/<int:branch_id>/', active_branch, name="active_branch"),
     path('branch-inactive/<int:branch_id>/', inactive_branch, name="inactive_branch"),
+
+    # Endpoint
+    path('get-branches/<int:company_id>/', get_branches_by_company, name='get_branches_by_company'),
 ]

@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 
 # Import models
 from .models import *
@@ -6,7 +6,7 @@ from .models import *
 # Import decorators
 from django.contrib.auth.decorators import login_required
 from apps.accounts.decorators import superuser_required
-from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse
 
 # Import paginator's
 from django.core.paginator import Paginator
@@ -17,6 +17,14 @@ from django.contrib import messages
 
 # Import transaction
 from django.db import transaction, IntegrityError
+
+# Endpoint
+@login_required
+@superuser_required
+def get_branches_by_company(request, company_id):
+    """Devuelve las sucursales activas de una empresa, en formato JSON, para el <select> dinámico."""
+    branches = Branch.objects.filter(company_id=company_id, is_active=True).values('id', 'name')
+    return JsonResponse(list(branches), safe=False)
 
 # Company info
 @login_required

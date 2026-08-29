@@ -26,13 +26,18 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label for="company" class="form-label">Empresa</label>
-                        <select name="role" id="role" class="form-select">
-                            <option value="" disabled {% if not employee.role %}selected{% endif %}>Selecciona el rol del empleado</option>
-                            {% for value, label in roles %}
-                                {% if value != "admin" %}
-                                    <option value="{{ value }}" {% if employee.role == value %}selected{% endif %}>{{ label }}</option>
-                                {% endif %}
+                        <select name="company" id="company" class="form-select">
+                            <option value="" disabled {% if not employee.branch %}selected{% endif %}>Selecciona la empresa</option>
+                            {% for c in company %}
+                                <option value="{{ c.id }}" {% if employee.branch.company_id == c.id %}selected{% endif %}>{{ c.name }}</option>
                             {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="branch" class="form-label">Sucursal</label>
+                        <select name="branch" id="branch" class="form-select" data-current="{{ employee.branch.id|default:'' }}">
+                            <option value="" disabled selected>Primero selecciona una empresa</option>
                         </select>
                     </div>
 
@@ -122,4 +127,9 @@
             <a href="{% url 'account:list' %}" class="btn btn-outline-secondary">Cancelar</a>
         </div>
     </form>
+
+    <script>
+        const branchesUrlTemplate = "{% url 'company:get_branches_by_company' 0 %}"
+    </script>
+    <script src="{% static 'js/users/update_user.script.js' %}"></script>
 {% endblock %}
