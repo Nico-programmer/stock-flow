@@ -1,17 +1,19 @@
 # authenticator
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 
 # Decorators
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.views.decorators.http import require_POST
 from .decorators import superuser_required
+from django.urls import reverse
 
 from django.contrib import messages
 
 # Import paginator
 from django.core.paginator import Paginator
 from django.core.exceptions import ValidationError
-from django.db.models import Q, Case, When, Value, IntegerField
+from django.db.models import Q, Case, When, Value, IntegerField, F
+from itertools import groupby
 
 from django.shortcuts import render, redirect, get_object_or_404
 
@@ -24,9 +26,9 @@ from .forms import *
 from .models import *
 from apps.companies.models import *
 
-""" Login View """
+"""------------------------------------------------------------------ Authenticator Views ------------------------------------------------------------------"""
+
 def login_view(request):
-    # If you are already authenticated, there is no point in seeing the login again.
     if request.user.is_authenticated:
         return redirect('dashboard')
 
@@ -46,23 +48,26 @@ def login_view(request):
 
                 login(request, user)
 
-                # Redirection according to role
-                if user.role == 'admin':
-                    return redirect('dashboard')
-                else:
-                    return redirect('dashboard')
+                messages.success(request, f"¡Bienvenido, {user.get_short_name()}!")
+                return render(request, 'login.html', {
+                    'form': form,
+                    'redirect_url': reverse('dashboard'),
+                })
             else:
                 messages.error(request, "Usuario o contraseña incorrectos.")
-        # If the form is invalid, it lands here and is re-rendered with errors.
     else:
         form = LoginForm()
 
     return render(request, 'login.html', {'form': form})
 
+@require_POST
+def logout_view(request):
+    logout(request)
+    messages.success(request, "Sesión cerrada correctamente.")
+    return render(request, "login.html", {'form': LoginForm, 'redirect_url': reverse('account:login')})
 
 """------------------------------------------------------------------ Users View ------------------------------------------------------------------"""
 
-# User List
 @login_required
 @superuser_required
 def userList_view(request):
@@ -73,7 +78,16 @@ def userList_view(request):
 
     users = (
         CustomUser.objects
-        .select_related('permissions', 'company')  # The company name is added to avoid N+1 queries when displaying the name
+        .select_related('permissions', 'company', 'branch', 'branch__company')
+        .annotate(
+            # Si el usuario tiene company directa (admin), se usa esa.
+            # Si no, se usa la company de su branch (manager/employee).
+            effective_company_id=Case(
+                When(company__isnull=False, then=F('company_id')),
+                default=F('branch__company_id'),
+                output_field=IntegerField(),
+            )
+        )
     )
 
     if query:
@@ -91,11 +105,9 @@ def userList_view(request):
         users = users.filter(**{f'permissions__{permission_filter}': True})
 
     if company_filter:
-        # company_filter arrives as the id of the selected company
-        users = users.filter(company_id=company_filter)
+        users = users.filter(effective_company_id=company_filter)
 
-    # Order: first by company name (so that regroup works in the template),
-    # then the fixed role order, then name
+    # Orden fijo por rol: Admin -> Encargado -> Empleado
     users = users.annotate(
         role_order=Case(
             When(role=CustomUser.Role.ADMIN, then=Value(0)),
@@ -103,20 +115,32 @@ def userList_view(request):
             default=Value(2),
             output_field=IntegerField(),
         )
-    ).order_by('company__name', 'role_order', 'first_name', 'last_name')
+    ).order_by('effective_company_id', 'role_order', 'first_name', 'last_name')
 
     paginator = Paginator(users, 10)
     page_obj = paginator.get_page(request.GET.get('page'))
 
+    # Agrupamiento manual por empresa (regroup no sirve aquí porque no hay
+    # un campo FK directo "company" en todos los usuarios)
+    grouped = []
+    for company_id, group in groupby(page_obj.object_list, key=lambda u: u.effective_company_id):
+        group_list = list(group)
+        first_user = group_list[0]
+        company_obj = first_user.company or (first_user.branch.company if first_user.branch else None)
+        grouped.append({'company': company_obj, 'users': group_list})
+
     context = {
         'page_obj': page_obj,
+        'grouped': grouped,
         'query': query,
         'role_filter': role_filter,
         'permission_filter': permission_filter,
         'company_filter': company_filter,
-        'companies': Company.objects.all(),  # to populate the <select> of the filter
+        'companies': Company.objects.filter(is_active=True),
     }
     return render(request, "users/user_list.html", context)
+
+from django.urls import reverse
 
 @login_required
 @superuser_required
@@ -134,6 +158,29 @@ def create_user(request):
         password = request.POST.get("password", "")
         password2 = request.POST.get("password2", "")
         role = request.POST.get("role", "")
+
+        # Se capturan los permisos aquí arriba también, para reutilizarlos en cualquier render de error
+        can_manage_inventory = 'can_manage_inventory' in request.POST
+        can_manage_sales = 'can_manage_sales' in request.POST
+        can_manage_employees = 'can_manage_employees' in request.POST
+        can_view_reports = 'can_view_reports' in request.POST
+
+        # Contexto base reutilizable: se repite en cada return de error para no repetir el diccionario
+        base_context = {
+            'companies': companies_qs,
+            'roles': roles,
+            'first_name': first_name,
+            'last_name': last_name,
+            'username': username,
+            'email': email,
+            'selected_company': company_id,
+            'selected_branch': branch_id,
+            'selected_role': role,
+            'can_manage_inventory': can_manage_inventory,
+            'can_manage_sales': can_manage_sales,
+            'can_manage_employees': can_manage_employees,
+            'can_view_reports': can_view_reports,
+        }
 
         errors = []
 
@@ -162,16 +209,8 @@ def create_user(request):
 
         if errors:
             messages.error(request, errors[0])
-            return render(request, 'users/create_users.html', {
-                'companies': companies_qs,
-                'first_name': first_name,
-                'last_name': last_name,
-                'username': username,
-                'email': email,
-                'roles': roles,
-            })
+            return render(request, 'users/create_users.html', base_context)
 
-        # La sucursal debe pertenecer realmente a la empresa seleccionada
         branch_obj = get_object_or_404(Branch, id=branch_id, company_id=company_id, is_active=True)
 
         try:
@@ -192,21 +231,25 @@ def create_user(request):
                     user=user,
                     defaults={
                         'branch': user.branch,
-                        'can_manage_inventory': 'can_manage_inventory' in request.POST,
-                        'can_manage_sales': 'can_manage_sales' in request.POST,
-                        'can_manage_employees': 'can_manage_employees' in request.POST,
-                        'can_view_reports': 'can_view_reports' in request.POST,
+                        'can_manage_inventory': can_manage_inventory,
+                        'can_manage_sales': can_manage_sales,
+                        'can_manage_employees': can_manage_employees,
+                        'can_view_reports': can_view_reports,
                         'granted_by': request.user,
                     }
                 )
         except (IntegrityError, ValidationError):
             messages.error(request, "Ocurrió un error al crear al usuario. Intenta de nuevo.")
-            return render(request, 'users/create_users.html', {'companies': companies_qs, 'roles': roles,})
+            return render(request, 'users/create_users.html', base_context)
 
         messages.success(request, f"Usuario {user.username} creado correctamente.")
-        return redirect('account:list')
+        return render(request, 'users/create_users.html', {
+            'companies': companies_qs,
+            'roles': roles,
+            'redirect_url': reverse('account:list'),
+        })
 
-    return render(request, 'users/create_users.html', {'companies': companies_qs, 'roles': roles,})
+    return render(request, 'users/create_users.html', {'companies': companies_qs, 'roles': roles})
 
 @login_required
 @superuser_required
@@ -282,7 +325,7 @@ def update_user(request, user_id):
             return render(request, "users/update_user.html", context)
 
         messages.success(request, f"El usuario {username} fue editado exitosamente.")
-        return redirect('account:list')
+        context['redirect_url'] = reverse('account:list')
 
     return render(request, 'users/update_user.html', context)
 

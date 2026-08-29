@@ -148,7 +148,7 @@ class EmployeePermission(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Última actualización")
 
     def __str__(self):
-        return f'Permisos de {self.user.username} en {self.company.name}'
+        return f'Permisos de {self.user.username} en {self.branch.name}'
 
     class Meta:
         verbose_name = "Permiso de empleado"

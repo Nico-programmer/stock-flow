@@ -76,20 +76,17 @@
         </div>
     </form>
 
-    <!-- List grouped by role -->
-    {% regroup page_obj.object_list by company as company_groups %}
-
     {% if page_obj.object_list %}
-        {% for group in company_groups %}
+        {% for item in grouped %}
             <div class="mb-4">
                 <h6 class="text-uppercase text-muted small fw-semibold mb-2">
-                    {{ group.grouper.name|default:"Sin compañía asignada" }}
-                    <span class="text-muted">({{ group.list|length }})</span>
+                    {{ item.company.name|default:"Sin compañía asignada" }}
+                    <span class="text-muted">({{ item.users|length }})</span>
                 </h6>
 
                 <div class="card border-0 shadow-sm">
                     <ul class="list-group list-group-flush">
-                        {% for user in group.list %}
+                        {% for user in item.users %}
                             <li class="list-group-item">
                                 <div class="d-flex align-items-center flex-wrap gap-3">
 

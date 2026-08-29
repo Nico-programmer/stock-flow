@@ -19,6 +19,40 @@
     <form method="POST">
         {% csrf_token %}
 
+        {% if messages %}
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    const djangoMessages = [
+                        {% for message in messages %}
+                            { text: "{{ message|escapejs }}", tag: "{{ message.tags|default:'info'|escapejs }}" },
+                        {% endfor %}
+                    ];
+
+                    const redirectUrl = "{{ redirect_url|default:''|escapejs }}";
+
+                    djangoMessages.forEach(function (msg, index) {
+                        let icon = 'info';
+                        if (msg.tag.includes('danger')) icon = 'error';
+                        else if (msg.tag.includes('success')) icon = 'success';
+                        else if (msg.tag.includes('warning')) icon = 'warning';
+
+                        Swal.fire({
+                            icon: icon,
+                            text: msg.text,
+                            confirmButtonColor: '#1657D6',
+                            allowEscapeKey: false,
+                            allowOutsideClick: false,
+                        }).then(function () {
+                            // Solo redirige si es el último mensaje y hay una URL destino
+                            if (index === djangoMessages.length - 1 && redirectUrl) {
+                                window.location.href = redirectUrl;
+                            }
+                        });
+                    });
+                });
+            </script>
+        {% endif %}
+
         <div class="card border-0 shadow-sm mb-3">
             <div class="card-body">
                 <h6 class="text-uppercase text-muted small fw-semibold mb-3">Datos personales</h6>

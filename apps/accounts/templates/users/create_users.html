@@ -22,11 +22,36 @@
                 <h6 class="text-uppercase text-muted small fw-semibold mb-3">Datos personales</h6>
 
                 {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert alert-danger py-2 small" role="alert">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function () {
+                            const djangoMessages = [
+                                {% for message in messages %}
+                                    { text: "{{ message|escapejs }}", tag: "{{ message.tags|default:'info'|escapejs }}" },
+                                {% endfor %}
+                            ];
+
+                            const redirectUrl = "{{ redirect_url|default:''|escapejs }}";
+
+                            djangoMessages.forEach(function (msg, index) {
+                                let icon = 'info';
+                                if (msg.tag.includes('danger')) icon = 'error';
+                                else if (msg.tag.includes('success')) icon = 'success';
+                                else if (msg.tag.includes('warning')) icon = 'warning';
+
+                                Swal.fire({
+                                    icon: icon,
+                                    text: msg.text,
+                                    confirmButtonColor: '#1657D6',
+                                    allowEscapeKey: false,
+                                    allowOutsideClick: false,
+                                }).then(function () {
+                                    if (index === djangoMessages.length - 1 && redirectUrl) {
+                                        window.location.href = redirectUrl;
+                                    }
+                                });
+                            });
+                        });
+                    </script>
                 {% endif %}
 
                 <div class="row g-3">
@@ -35,7 +60,7 @@
                         <select name="company" id="company" class="form-select">
                             <option value="" disabled selected>Selecciona la empresa</option>
                             {% for c in companies %}
-                                <option value="{{ c.id }}">{{ c.name }}</option>
+                                <option value="{{ c.id }}" {% if c.id|stringformat:"s" == selected_company %}selected{% endif %}>{{ c.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -43,7 +68,7 @@
                     <div class="col-md-6">
                         <label for="branch" class="form-label">Sucursal</label>
                         <select name="branch" id="branch" class="form-select" disabled>
-                            <option value="" disabled selected>Primero selecciona una empresa</option>
+                            <select name="branch" id="branch" class="form-select" data-current="{{ selected_branch }}">
                         </select>
                     </div>
 
@@ -97,7 +122,7 @@
                             <option value="" disabled {% if not employee.role %}selected{% endif %}>Selecciona el rol del empleado</option>
                             {% for value, label in roles %}
                                 {% if value != "admin" %}
-                                    <option value="{{ value }}" {% if employee.role == value %}selected{% endif %}>{{ label }}</option>
+                                    <option value="{{ value }}" {% if value == selected_role %}selected{% endif %}>{{ label }}</option>
                                 {% endif %}
                             {% endfor %}
                         </select>
@@ -113,8 +138,7 @@
                 <div class="row g-2">
                     <div class="col-md-6">
                         <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" role="switch"
-                                name="can_manage_inventory" id="can_manage_inventory">
+                            <input class="form-check-input" type="checkbox" role="switch" name="can_manage_inventory" id="can_manage_inventory" {% if can_manage_inventory %}checked{% endif %}>
                             <label class="form-check-label" for="can_manage_inventory">
                                 <i class="fa-solid fa-boxes-stacked me-1"></i> Manejo de inventario
                             </label>
@@ -123,8 +147,7 @@
 
                     <div class="col-md-6">
                         <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" role="switch"
-                                name="can_manage_sales" id="can_manage_sales">
+                            <input class="form-check-input" type="checkbox" role="switch" name="can_manage_sales" id="can_manage_sales" {% if can_manage_sales %}checked{% endif %}>
                             <label class="form-check-label" for="can_manage_sales">
                                 <i class="fa-solid fa-cart-shopping me-1"></i> Manejo de ventas
                             </label>
@@ -133,8 +156,7 @@
 
                     <div class="col-md-6">
                         <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" role="switch"
-                                name="can_manage_employees" id="can_manage_employees">
+                            <input class="form-check-input" type="checkbox" role="switch" name="can_manage_employees" id="can_manage_employees" {% if can_manage_employees %}checked{% endif %}>
                             <label class="form-check-label" for="can_manage_employees">
                                 <i class="fa-solid fa-id-badge me-1"></i> Manejo de empleados
                             </label>
@@ -143,8 +165,7 @@
 
                     <div class="col-md-6">
                         <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" role="switch"
-                                name="can_view_reports" id="can_view_reports">
+                            <input class="form-check-input" type="checkbox" role="switch" name="can_view_reports" id="can_view_reports" {% if can_view_reports %}checked{% endif %}>
                             <label class="form-check-label" for="can_view_reports">
                                 <i class="fa-solid fa-chart-line me-1"></i> Manejo de reportes
                             </label>
