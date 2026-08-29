@@ -6,6 +6,7 @@ from .models import *
 # Import decorators
 from django.contrib.auth.decorators import login_required
 from apps.accounts.decorators import superuser_required
+from django.shortcuts import render, get_object_or_404
 
 # Import paginator's
 from django.core.paginator import Paginator
@@ -17,7 +18,16 @@ from django.contrib import messages
 # Import transaction
 from django.db import transaction, IntegrityError
 
-# Companies list
+# Company info
+@login_required
+def company_info(request, company_id):
+    company = get_object_or_404(Company, company_id)
+    branch = Branch.objects.filter(company=company_id)
+
+    context = {'company': company, 'branch': branch}
+    return render(request, "companies/company_info.html", context)
+
+# Companies list/Branch list
 @login_required
 @superuser_required
 def companies_list(request):
@@ -52,7 +62,7 @@ def companies_list(request):
     }
     return render(request, "companies_list.html", context)
 
-# Create companies
+# Create companies/branch
 @login_required
 @superuser_required
 def create_companies(request):
@@ -127,9 +137,93 @@ def create_companies(request):
         return redirect('companies_list') # Post/Redirect/Get: avoids duplicate forwarding    
     return render(request, 'companies/create_companies.html')
 
-# Update companies
+# Update companies/branch
 @login_required
 @superuser_required
 def update_companies(request, companies_id):
-    companies = Company.objects.filter(id=companies_id)
-    return render(request, "companies/update_companies.html", {'companies': companies})
+    company = get_object_or_404(Company, id=companies_id)
+    branches = Branch.objects.filter(company=company)
+
+    context = {'company': company, 'branches': branches}
+
+    if request.method == 'POST':
+        name = request.POST.get("name", "").strip()
+        phone = request.POST.get("phone", "").strip()
+
+        branch_ids = request.POST.getlist("branch_id[]")
+        branch_names = request.POST.getlist("branch_name[]")
+        branch_addresses = request.POST.getlist("branch_address[]")
+
+        # --- 1. Preliminary validations ---
+        errors = []
+
+        if not name:
+            errors.append("El nombre es obligatorio.")
+        if not phone:
+            errors.append("El teléfono es obligatorio.")
+
+        # At least one branch with complete data
+        has_valid_branch = False
+        for b_name, b_address in zip(branch_names, branch_addresses):
+            if b_name.strip() and b_address.strip():
+                has_valid_branch = True
+            elif b_name.strip() or b_address.strip():
+                errors.append("Cada sucursal debe tener nombre y dirección.")
+                break
+
+        if not has_valid_branch:
+            errors.append("Debes tener al menos una sucursal completa.")
+
+        if errors:
+            messages.error(request, errors[0])
+            return render(request, "companies/update_companies.html", context)
+
+        # --- 2. Update within a transaction ---
+        try:
+            with transaction.atomic():
+                company.name = name
+                company.phone_number = phone
+                company.save()
+
+                for b_id, b_name, b_address in zip(branch_ids, branch_names, branch_addresses):
+                    b_name = b_name.strip()
+                    b_address = b_address.strip()
+
+                    if not b_name and not b_address:
+                        continue # Empty row, ignored
+
+                    if b_id:
+                        Branch.objects.filter(id=b_id, company=company).update(
+                            name=b_name,
+                            address=b_address,
+                        )
+                    else:
+                        Branch.objects.create(
+                            company=company,
+                            name=b_name,
+                            address = b_address
+                        )
+        except IntegrityError:
+            messages.error(request, "Ocurrió un error al actualizar la empresa. Intenta de nuevo.")
+            return render(request, "companies/update_companies.html", context)
+
+        return redirect('company:list')
+    return render(request, "companies/update_companies.html", context)
+
+# Active Branch
+@login_required
+@superuser_required
+def active_branch(request, branch_id):
+    branch = get_object_or_404(Branch, id=branch_id)
+    branch.is_active = True
+    branch.save()
+    return redirect('company:update', companies_id=branch.company_id)
+
+# Inactive Branch
+@login_required
+@superuser_required
+def inactive_branch(request, branch_id):
+    branch = get_object_or_404(Branch, id=branch_id)
+    branch.is_active = False
+    branch.save()
+    return redirect('company:update', companies_id=branch.company_id)

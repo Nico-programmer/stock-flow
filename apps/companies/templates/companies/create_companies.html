@@ -5,7 +5,7 @@
 
 {% block content %}
     <div class="d-flex align-items-center gap-2 mb-4">
-        <a href="{% url 'companies_list' %}" class="btn btn-outline-secondary btn-sm">
+        <a href="{% url 'company:list' %}" class="btn btn-outline-secondary btn-sm">
             <i class="fa-solid fa-arrow-left"></i>
         </a>
         <div>
@@ -111,9 +111,9 @@
                 <i class="fa-solid fa-check me-1"></i> Crear empresa
             </button>
  
-            <a href="{% url "companies_list" %}" class="btn btn-outline-secondary">Cancelar</a>
+            <a href="{% url "company:list" %}" class="btn btn-outline-secondary">Cancelar</a>
         </div>
     </form>
 
-    <script src="{% static "js/create_companies.script.js" %}"></script>
+    <script src="{% static 'js/companies/create_companies.script.js' %}"></script>
 {% endblock %}

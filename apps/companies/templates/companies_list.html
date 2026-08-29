@@ -10,7 +10,7 @@
             <p class="text-muted mb-0">Administra las empresas que pertenecen a stock-flow.</p>
         </div>
 
-        <a href="{% url "create_companies" %}" class="btn btn-erp-primary text-white"><i class="fa-solid fa-plus"></i> Crear empresa</a>
+        <a href="{% url "company:create" %}" class="btn btn-erp-primary text-white"><i class="fa-solid fa-plus"></i> Crear empresa</a>
     </div>
 
     <!-- Filters -->
@@ -44,7 +44,7 @@
 
             {% if query or status_filter %}
                 <div class="mt-2">
-                    <a href="{% url 'companies_list' %}" class="small text-decoration-none">
+                    <a href="{% url 'company:list' %}" class="small text-decoration-none">
                         <i class="bi bi-x-circle me-1"></i>Limpiar filtros
                     </a>
                 </div>
@@ -87,7 +87,7 @@
 
                             <!-- Acciones -->
                             <div class="ms-auto flex-shrink-0">
-                                <a href="{% url "update_companies" c.id %}" class="btn btn-sm btn-outline-secondary" title="Actualizar">
+                                <a href="{% url "company:update" c.id %}" class="btn btn-sm btn-outline-secondary" title="Actualizar">
                                     <i class="fa-solid fa-pen"></i>
                                 </a>
 

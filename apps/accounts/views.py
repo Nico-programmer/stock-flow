@@ -198,7 +198,7 @@ def create_user(request):
             return render(request, 'users/create_users.html', {'branch': branches_qs})
 
         messages.success(request, f"Usuario {user.username} creado correctamente.")
-        return redirect('users_list')
+        return redirect('account:list')
 
     return render(request, 'users/create_users.html', {'branch': branches_qs})
 
@@ -273,7 +273,7 @@ def update_user(request, user_id):
             messages.error(request, "Ocurrió un error al actualizar el usuario. Inténtalo de nuevo.")
             return render(request, "users/update_user.html", context)
 
-        return redirect('users_list')
+        return redirect('account:list')
 
     return render(request, 'users/update_user.html', context)
 
@@ -285,12 +285,12 @@ def deactivate_user(request, user_id):
     employee = get_object_or_404(CustomUser, id=user_id)
 
     if employee.id == request.user.id:
-        return redirect("users_list")
+        return redirect("account:list")
 
     employee.is_active = False
     employee.save()
 
-    return redirect("users_list")
+    return redirect("account:list")
 
 # Active user
 @login_required
@@ -301,4 +301,4 @@ def activate_user(request, user_id):
     employee.is_active = True
     employee.save()
 
-    return redirect("users_list")
+    return redirect("account:list")

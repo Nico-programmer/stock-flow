@@ -19,8 +19,7 @@
         {% if request.user.is_superuser %}
             {% if request.user.role == request.user.Role.ADMIN %}
                 <li class="nav-item">
-                    <a href="{% url 'companies_list' %}"
-                    class="nav-link {% if request.resolver_match.url_name == 'companies_list' %}active{% endif %}">
+                    <a href="{% url 'company:list' %}" class="nav-link {% if request.resolver_match.namespace == 'company' %}active{% endif %}">
                         <i class="fa-solid fa-suitcase"></i> Gestionar empresas
                     </a>
                 </li>
@@ -30,8 +29,7 @@
         {% if request.user.is_superuser %}
             {% if request.user.role == request.user.Role.ADMIN %}
                 <li class="nav-item">
-                    <a href="{% url 'users_list' %}"
-                    class="nav-link {% if request.resolver_match.url_name == 'users_list' %}active{% endif %}">
+                    <a href="{% url 'account:list' %}" class="nav-link {% if request.resolver_match.namespace == 'account' %}active{% endif %}">
                         <i class="fa-solid fa-users me-2"></i> Gestionar usuarios
                     </a>
                 </li>
@@ -89,8 +87,8 @@
         {% comment %}
 
         <li class="nav-item">
-            <a href="{% url 'company_info' %}"
-               class="nav-link {% if request.resolver_match.url_name == 'company_info' %}active{% endif %}">
+            <a href="{% url 'company:info' %}"
+               class="nav-link {% if request.resolver_match.namespace == 'company:info' %}active{% endif %}">
                 <i class="fa-solid fa-building me-2"></i> Info. compañía
             </a>
         </li>
@@ -99,7 +97,7 @@
     </ul>
 
     <div class="mt-auto pt-3 border-top border-secondary-subtle">
-        <form id="logout-form" method="post" action="{% url 'logout' %}" class="m-0">
+        <form id="logout-form" method="post" action="{% url 'account:logout' %}" class="m-0">
             {% csrf_token %}
             <button type="submit" class="nav-link nav-link-logout btn btn-link text-decoration-none text-white-50 w-100 text-start d-flex align-items-center border-0 px-3 py-2 rounded">
                 <i class="fa-solid fa-right-from-bracket me-2"></i> Cerrar sesión

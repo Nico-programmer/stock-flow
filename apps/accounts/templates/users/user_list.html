@@ -10,7 +10,7 @@
             <p class="text-muted mb-0">Administra a los usuarios que pertenecen a tu empresa.</p>
         </div>
         
-        <a href="{% url "users_create" %}" class="btn btn-erp-primary text-white"><i class="fa-solid fa-plus"></i> Crear usuario</a>
+        <a href="{% url "account:create" %}" class="btn btn-erp-primary text-white"><i class="fa-solid fa-plus"></i> Crear usuario</a>
     </div>
 
     <!-- Filters -->
@@ -68,7 +68,7 @@
 
             {% if query or role_filter or permission_filter %}
                 <div class="mt-2">
-                    <a href="{% url 'users_list' %}" class="small text-decoration-none">
+                    <a href="{% url 'account:list' %}" class="small text-decoration-none">
                         <i class="bi bi-x-circle me-1"></i>Limpiar filtros
                     </a>
                 </div>
@@ -150,11 +150,11 @@
                                     <!-- Actions -->
                                     <div class="ms-auto flex-shrink-0">
                                         {% if user.is_active %}
-                                            <a href="{% url 'update_user' user.id %}" class="btn btn-sm btn-outline-secondary" title="Actualizar">
+                                            <a href="{% url 'account:update' user.id %}" class="btn btn-sm btn-outline-secondary" title="Actualizar">
                                                 <i class="fa-solid fa-pen"></i>
                                             </a>
 
-                                            <form method="POST" action="{% url 'deactivate_user' user.id %}" onsubmit="return confirm('¿Seguro que deseas desactivar a este usuario?');" style="display:inline;">
+                                            <form method="POST" action="{% url 'account:deactivate' user.id %}" onsubmit="return confirm('¿Seguro que deseas desactivar a este usuario?');" style="display:inline;">
                                                 {% csrf_token %}
                                                 <button type="submit" class="btn btn-sm btn-outline-danger" title="Desactivar">
                                                     <i class="fa-solid fa-trash"></i>
@@ -163,7 +163,7 @@
                                         {% else %}
                                             <span class="badge rounded-pill text-bg-secondary me-1">Usuario inactivo</span>
 
-                                            <form method="POST" action="{% url 'activate_user' user.id %}" onsubmit="return confirm('¿Deseas reactivar a este usuario?');" style="display:inline;">
+                                            <form method="POST" action="{% url 'account:active' user.id %}" onsubmit="return confirm('¿Deseas reactivar a este usuario?');" style="display:inline;">
                                                 {% csrf_token %}
                                                 <button type="submit" class="btn btn-sm btn-outline-success" title="Reactivar">
                                                     <i class="fa-solid fa-rotate-left"></i>
