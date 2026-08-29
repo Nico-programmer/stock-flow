@@ -2,7 +2,7 @@ from django.db import models
 
 """ Company Model — the business entity, unique """
 class Company(models.Model):
-    name = models.CharField(max_length=150, verbose_name="Nombre de la empresa")
+    name = models.CharField(max_length=150, unique=True, verbose_name="Nombre de la empresa")
     phone_number = models.CharField(max_length=20, blank=True, verbose_name="Teléfono")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de creación")
     is_active = models.BooleanField(default=True, verbose_name="Activo")
