@@ -17,23 +17,19 @@
         </li>
 
         {% if request.user.is_superuser %}
-            {% if request.user.role == request.user.Role.ADMIN %}
-                <li class="nav-item">
-                    <a href="{% url 'company:list' %}" class="nav-link {% if request.resolver_match.namespace == 'company' %}active{% endif %}">
-                        <i class="fa-solid fa-suitcase"></i> Gestionar empresas
-                    </a>
-                </li>
-            {% endif %}
+            <li class="nav-item">
+                <a href="{% url 'company:list' %}" class="nav-link {% if request.resolver_match.namespace == 'company' %}active{% endif %}">
+                    <i class="fa-solid fa-suitcase"></i> Gestionar empresas
+                </a>
+            </li>
         {% endif %}
 
         {% if request.user.is_superuser %}
-            {% if request.user.role == request.user.Role.ADMIN %}
-                <li class="nav-item">
-                    <a href="{% url 'account:list' %}" class="nav-link {% if request.resolver_match.namespace == 'account' %}active{% endif %}">
-                        <i class="fa-solid fa-users me-2"></i> Gestionar usuarios
-                    </a>
-                </li>
-            {% endif %}
+            <li class="nav-item">
+                <a href="{% url 'account:list' %}" class="nav-link {% if request.resolver_match.namespace == 'account' %}active{% endif %}">
+                    <i class="fa-solid fa-users me-2"></i> Gestionar usuarios
+                </a>
+            </li>
         {% endif %}
         
         <li><hr class="text-white-50 my-2"></li>

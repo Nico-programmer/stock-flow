@@ -159,13 +159,11 @@ def create_user(request):
         password2 = request.POST.get("password2", "")
         role = request.POST.get("role", "")
 
-        # Se capturan los permisos aquí arriba también, para reutilizarlos en cualquier render de error
         can_manage_inventory = 'can_manage_inventory' in request.POST
         can_manage_sales = 'can_manage_sales' in request.POST
         can_manage_employees = 'can_manage_employees' in request.POST
         can_view_reports = 'can_view_reports' in request.POST
 
-        # Contexto base reutilizable: se repite en cada return de error para no repetir el diccionario
         base_context = {
             'companies': companies_qs,
             'roles': roles,
@@ -186,7 +184,7 @@ def create_user(request):
 
         if not company_id:
             errors.append("Selecciona la empresa.")
-        if not branch_id:
+        if role != 'admin' and not branch_id:
             errors.append("Selecciona la sucursal.")
         if not first_name:
             errors.append("El nombre es obligatorio.")
@@ -200,7 +198,7 @@ def create_user(request):
             errors.append("La contraseña es obligatoria.")
         if password != password2:
             errors.append("Las contraseñas no coinciden.")
-        if role not in ('manager', 'employee'):
+        if role not in ('admin', 'manager', 'employee'):
             errors.append("Selecciona un rol válido.")
         if username and CustomUser.objects.filter(username=username).exists():
             errors.append("Ese nombre de usuario ya está en uso.")
@@ -211,8 +209,6 @@ def create_user(request):
             messages.error(request, errors[0])
             return render(request, 'users/create_users.html', base_context)
 
-        branch_obj = get_object_or_404(Branch, id=branch_id, company_id=company_id, is_active=True)
-
         try:
             with transaction.atomic():
                 user = CustomUser(
@@ -220,24 +216,35 @@ def create_user(request):
                     username=username,
                     first_name=first_name,
                     last_name=last_name,
-                    branch=branch_obj,
                     role=role,
                 )
+
+                if role == 'admin':
+                    company_obj = get_object_or_404(Company, id=company_id, is_active=True)
+                    user.company = company_obj
+                    user.branch = None
+                else:
+                    branch_obj = get_object_or_404(Branch, id=branch_id, company_id=company_id, is_active=True)
+                    user.branch = branch_obj
+                    user.company = None
+
                 user.set_password(password)
                 user.full_clean()
                 user.save()
 
-                EmployeePermission.objects.update_or_create(
-                    user=user,
-                    defaults={
-                        'branch': user.branch,
-                        'can_manage_inventory': can_manage_inventory,
-                        'can_manage_sales': can_manage_sales,
-                        'can_manage_employees': can_manage_employees,
-                        'can_view_reports': can_view_reports,
-                        'granted_by': request.user,
-                    }
-                )
+                # El admin no maneja EmployeePermission, tiene acceso total por rol
+                if role != 'admin':
+                    EmployeePermission.objects.update_or_create(
+                        user=user,
+                        defaults={
+                            'branch': user.branch,
+                            'can_manage_inventory': can_manage_inventory,
+                            'can_manage_sales': can_manage_sales,
+                            'can_manage_employees': can_manage_employees,
+                            'can_view_reports': can_view_reports,
+                            'granted_by': request.user,
+                        }
+                    )
         except (IntegrityError, ValidationError):
             messages.error(request, "Ocurrió un error al crear al usuario. Intenta de nuevo.")
             return render(request, 'users/create_users.html', base_context)
@@ -258,14 +265,20 @@ def update_user(request, user_id):
     permissions = EmployeePermission.objects.filter(user=employee).first()
     companies_qs = Company.objects.filter(is_active=True)
 
+    # La empresa actual del empleado puede venir de dos lados según su rol:
+    # admin -> employee.company ; manager/employee -> employee.branch.company
+    current_company_id = employee.company_id or (employee.branch.company_id if employee.branch else None)
+
     context = {
         "employee": employee,
         "permissions": permissions,
         "company": companies_qs,
         "roles": CustomUser.Role.choices,
+        "current_company_id": current_company_id,
     }
 
     if request.method == "POST":
+        company_id = request.POST.get("company", "").strip()
         branch_id = request.POST.get("branch", "").strip()
         first_name = request.POST.get("first_name", "").strip()
         last_name = request.POST.get("last_name", "").strip()
@@ -275,7 +288,9 @@ def update_user(request, user_id):
 
         errors = []
 
-        if not branch_id:
+        if not company_id:
+            errors.append("Selecciona la empresa.")
+        if role != 'admin' and not branch_id:
             errors.append("Selecciona la sucursal a la que pertenece el usuario.")
         if not first_name:
             errors.append("El nombre es obligatorio.")
@@ -285,7 +300,7 @@ def update_user(request, user_id):
             errors.append("El nombre de usuario es obligatorio.")
         if not email:
             errors.append("El correo es obligatorio.")
-        if role not in ('manager', 'employee'):
+        if role not in ('admin', 'manager', 'employee'):
             errors.append("Selecciona un rol válido.")
         if CustomUser.objects.filter(username=username).exclude(id=employee.id).exists():
             errors.append("Ese nombre de usuario ya está en uso.")
@@ -296,8 +311,6 @@ def update_user(request, user_id):
             messages.error(request, errors[0])
             return render(request, 'users/update_user.html', context)
 
-        branch_obj = get_object_or_404(Branch, id=branch_id, is_active=True)
-
         try:
             with transaction.atomic():
                 employee.first_name = first_name
@@ -305,21 +318,34 @@ def update_user(request, user_id):
                 employee.username = username
                 employee.email = email
                 employee.role = role
-                employee.branch = branch_obj
+
+                if role == 'admin':
+                    company_obj = get_object_or_404(Company, id=company_id, is_active=True)
+                    employee.company = company_obj
+                    employee.branch = None
+                else:
+                    branch_obj = get_object_or_404(Branch, id=branch_id, company_id=company_id, is_active=True)
+                    employee.branch = branch_obj
+                    employee.company = None
+
                 employee.full_clean()
                 employee.save()
 
-                EmployeePermission.objects.update_or_create(
-                    user=employee,
-                    defaults={
-                        'branch': branch_obj,
-                        'can_manage_inventory': 'can_manage_inventory' in request.POST,
-                        'can_manage_sales': 'can_manage_sales' in request.POST,
-                        'can_manage_employees': 'can_manage_employees' in request.POST,
-                        'can_view_reports': 'can_view_reports' in request.POST,
-                        'granted_by': request.user,
-                    }
-                )
+                if role != 'admin':
+                    EmployeePermission.objects.update_or_create(
+                        user=employee,
+                        defaults={
+                            'branch': employee.branch,
+                            'can_manage_inventory': 'can_manage_inventory' in request.POST,
+                            'can_manage_sales': 'can_manage_sales' in request.POST,
+                            'can_manage_employees': 'can_manage_employees' in request.POST,
+                            'can_view_reports': 'can_view_reports' in request.POST,
+                            'granted_by': request.user,
+                        }
+                    )
+                else:
+                    # Si el usuario pasó de manager/employee a admin, se limpia cualquier permiso residual
+                    EmployeePermission.objects.filter(user=employee).delete()
         except (IntegrityError, ValidationError):
             messages.error(request, "Ocurrió un error al actualizar el usuario. Inténtalo de nuevo.")
             return render(request, "users/update_user.html", context)

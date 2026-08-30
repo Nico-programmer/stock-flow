@@ -63,7 +63,7 @@
                         <select name="company" id="company" class="form-select">
                             <option value="" disabled {% if not employee.branch %}selected{% endif %}>Selecciona la empresa</option>
                             {% for c in company %}
-                                <option value="{{ c.id }}" {% if employee.branch.company_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+                                <option value="{{ c.id }}" {% if current_company_id == c.id %}selected{% endif %}>{{ c.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -100,9 +100,7 @@
                         <select name="role" id="role" class="form-select">
                             <option value="" disabled {% if not employee.role %}selected{% endif %}>Selecciona el rol del empleado</option>
                             {% for value, label in roles %}
-                                {% if value != "admin" %}
-                                    <option value="{{ value }}" {% if employee.role == value %}selected{% endif %}>{{ label }}</option>
-                                {% endif %}
+                                <option value="{{ value }}" {% if employee.role == value %}selected{% endif %}>{{ label }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -110,7 +108,7 @@
             </div>
         </div>
 
-        <div class="card border-0 shadow-sm mb-3">
+        <div class="card border-0 shadow-sm mb-3" id="permissions-card">
             <div class="card-body">
                 <h6 class="text-uppercase text-muted small fw-semibold mb-3">Asignar permisos</h6>
 
