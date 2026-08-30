@@ -18,39 +18,44 @@ from django.contrib import messages
 # Import transaction
 from django.db import transaction, IntegrityError
 
-# Endpoint
+# Endpoint AJAX: lo llama el JS del form de usuarios al cambiar el <select> de empresa,
+# para repoblar el <select> de sucursal con las sucursales activas de esa empresa.
 @login_required
 @superuser_required
 def get_branches_by_company(request, company_id):
     """Devuelve las sucursales activas de una empresa, en formato JSON, para el <select> dinámico."""
     branches = Branch.objects.filter(company_id=company_id, is_active=True).values('id', 'name')
+    # safe=False: permite serializar una lista (no solo un dict) como cuerpo JSON.
     return JsonResponse(list(branches), safe=False)
 
-# Company info
+# Detalle de una empresa y sus sucursales.
 @login_required
 def company_info(request, company_id):
+    # OJO: falta el nombre del lookup -> debería ser get_object_or_404(Company, id=company_id).
     company = get_object_or_404(Company, company_id)
     branch = Branch.objects.filter(company=company_id)
 
     context = {'company': company, 'branch': branch}
     return render(request, "companies/company_info.html", context)
 
-# Companies list/Branch list
+# Listado de empresas con búsqueda, filtro por estado y paginación.
 @login_required
 @superuser_required
 def companies_list(request):
-    # Search and filter parameters from the URL
+    # Parámetros que llegan por querystring (?q=...&status=...).
     query = request.GET.get('q', '').strip()
     status_filter = request.GET.get('status', '') # 'active' / 'inactive' / ''
 
     companies = Company.objects.all()
 
     if query:
+        # Busca en el nombre de la empresa, en la dirección de cualquiera de sus sucursales
+        # y en el teléfono. El JOIN a branches puede devolver la misma empresa varias veces...
         companies = companies.filter(
             Q(name__icontains = query) |
             Q(branches__address__icontains = query) |
             Q(phone_number__icontains = query)
-        ).distinct() # Required: Without this, a company with multiple matching branches appears duplicated
+        ).distinct() # ...por eso distinct(): colapsa esos duplicados.
 
     if status_filter == 'active':
         companies = companies.filter(is_active=True)
@@ -59,7 +64,7 @@ def companies_list(request):
 
     companies = companies.order_by('name')
 
-    # Pagination (10 per page, same as in users_list)
+    # Paginación: 10 por página, igual que el listado de usuarios. ?page=N elige la página.
     paginator = Paginator(companies, 10)
     page_obj = paginator.get_page(request.GET.get('page'))
 
@@ -70,7 +75,7 @@ def companies_list(request):
     }
     return render(request, "companies_list.html", context)
 
-# Create companies/branch
+# Alta de una empresa junto con una o varias sucursales, en la misma transacción.
 @login_required
 @superuser_required
 def create_companies(request):
@@ -79,11 +84,12 @@ def create_companies(request):
         phone = request.POST.get("phone", "").strip()
         is_active = "is_active" in request.POST
 
-        # getlist() returns a list with all the values ​​of that "name"
+        # El form manda las sucursales como arrays (inputs name="branch_name[]" clonados por JS).
+        # getlist() devuelve la lista completa de valores de ese name; los dos arrays van "en paralelo".
         branch_name = request.POST.getlist("branch_name[]")
         branch_addresses  = request.POST.getlist("branch_address[]")
 
-        # --- 1. Preliminary validations ---
+        # --- 1. Validaciones (se juntan todas antes de tocar la BD) ---
         errors = []
 
         if not name:
@@ -93,7 +99,7 @@ def create_companies(request):
         if name and Company.objects.filter(name=name).exists():
             errors.append("El nombre de la compañía ya existe.")
 
-        # Verify that there is at least one branch with data
+        # zip empareja nombre[i] con dirección[i]. Se descartan las filas totalmente vacías.
         valid_branches = [
             (n.strip(), a.strip())
             for n, a in zip(branch_name, branch_addresses)
@@ -103,6 +109,7 @@ def create_companies(request):
         if not valid_branches:
             errors.append("Debes agregar al menos una sucursal.")
         else:
+            # Si una fila tiene un dato, tiene que tener los dos (nombre y dirección).
             for n, a in valid_branches:
                 if not n:
                     errors.append("Todas las sucursales deben tener un nombre.")
@@ -114,7 +121,7 @@ def create_companies(request):
         if errors:
             messages.error(request, errors[0])
 
-            # The form is re-rendered with the existing text and the company queryset intact.
+            # Se re-renderiza el form conservando lo que el usuario ya había escrito.
             return render(request, 'companies/create_companies.html', {
                 'name': name,
                 'branch_name': branch_name,
@@ -123,7 +130,7 @@ def create_companies(request):
                 'is_active': is_active
             })
 
-        # --- 2. Creation within a transaction ---
+        # --- 2. Creación dentro de una transacción (empresa + sucursales, todo o nada) ---
         try:
             with transaction.atomic():
                 company = Company.objects.create(
@@ -142,10 +149,11 @@ def create_companies(request):
             messages.error(request, 'Ocurrió un error al crear la empresa. Intenta de nuevo.')
             return render(request, 'companies/create_companies.html')
 
-        return redirect('companies_list') # Post/Redirect/Get: avoids duplicate forwarding    
+        return redirect('companies_list') # Post/Redirect/Get: evita reenviar el form si se recarga
+    # GET: form vacío.
     return render(request, 'companies/create_companies.html')
 
-# Update companies/branch
+# Edición de una empresa y de sus sucursales (existentes y nuevas) a la vez.
 @login_required
 @superuser_required
 def update_companies(request, companies_id):
@@ -158,11 +166,12 @@ def update_companies(request, companies_id):
         name = request.POST.get("name", "").strip()
         phone = request.POST.get("phone", "").strip()
 
+        # Tres arrays en paralelo. branch_id[] distingue sucursal existente (trae id) de nueva (vacío).
         branch_ids = request.POST.getlist("branch_id[]")
         branch_names = request.POST.getlist("branch_name[]")
         branch_addresses = request.POST.getlist("branch_address[]")
 
-        # --- 1. Preliminary validations ---
+        # --- 1. Validaciones ---
         errors = []
 
         if not name:
@@ -170,7 +179,7 @@ def update_companies(request, companies_id):
         if not phone:
             errors.append("El teléfono es obligatorio.")
 
-        # At least one branch with complete data
+        # Tiene que quedar al menos una sucursal completa; una fila a medias es error.
         has_valid_branch = False
         for b_name, b_address in zip(branch_names, branch_addresses):
             if b_name.strip() and b_address.strip():
@@ -186,26 +195,30 @@ def update_companies(request, companies_id):
             messages.error(request, errors[0])
             return render(request, "companies/update_companies.html", context)
 
-        # --- 2. Update within a transaction ---
+        # --- 2. Actualización dentro de una transacción ---
         try:
             with transaction.atomic():
                 company.name = name
                 company.phone_number = phone
                 company.save()
 
+                # Se recorren las tres listas en paralelo (id, nombre, dirección de cada fila).
                 for b_id, b_name, b_address in zip(branch_ids, branch_names, branch_addresses):
                     b_name = b_name.strip()
                     b_address = b_address.strip()
 
                     if not b_name and not b_address:
-                        continue # Empty row, ignored
+                        continue # fila vacía: se ignora
 
                     if b_id:
+                        # Fila con id -> sucursal existente: se actualiza. company=company evita
+                        # editar por error una sucursal de otra empresa si mandan un id ajeno.
                         Branch.objects.filter(id=b_id, company=company).update(
                             name=b_name,
                             address=b_address,
                         )
                     else:
+                        # Fila sin id -> sucursal nueva: se crea.
                         Branch.objects.create(
                             company=company,
                             name=b_name,
@@ -218,7 +231,8 @@ def update_companies(request, companies_id):
         return redirect('company:list')
     return render(request, "companies/update_companies.html", context)
 
-# Active Branch
+# Reactiva una sucursal puntual y vuelve a la pantalla de edición de su empresa.
+# El front lo dispara con fetch() (no con un <form>, para no anidar formularios en el form de edición).
 @login_required
 @superuser_required
 def active_branch(request, branch_id):
@@ -227,7 +241,7 @@ def active_branch(request, branch_id):
     branch.save()
     return redirect('company:update', companies_id=branch.company_id)
 
-# Inactive Branch
+# Baja lógica de una sucursal puntual (mismo flujo que active_branch).
 @login_required
 @superuser_required
 def inactive_branch(request, branch_id):
