@@ -1,8 +1,7 @@
 from django.db import models
 
 # AbstractBaseUser: da solo password/last_login, sin campos de nombre ni el manager.
-# PermissionsMixin: agrega is_superuser, groups y user_permissions (sistema de permisos de Django).
-# Se usan estos en vez de AbstractUser para tener control total de los campos.
+# PermissionsMixin: agrega is_superuser, groups y user_permissions (sistema de permisos de Django). Se usan estos en vez de AbstractUser para tener control total de los campos.
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.utils import timezone
 
