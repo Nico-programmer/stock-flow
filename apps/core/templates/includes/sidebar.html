@@ -36,18 +36,17 @@
         
         <li class="nav-item px-3 pb-1">
             <span class="text-uppercase text-white-50 small fw-semibold">Operación</span>
-        </li>
-
-        {% comment %}
+        </li>        
 
         {% if request.user.role == request.user.Role.ADMIN or request.user.permissions.can_manage_inventory %}
             <li class="nav-item">
-                <a href="{% url 'inventory_list' %}"
-                class="nav-link {% if request.resolver_match.url_name == 'inventory_list' %}active{% endif %}">
+                <a href="{% url 'inventory:inventory_list' %}" class="nav-link {% if request.resolver_match.namespace == 'inventory' %}active{% endif %}">
                     <i class="fa-solid fa-boxes-stacked me-2"></i> Inventario
                 </a>
             </li>
         {% endif %}
+
+        {% comment %}
 
         {% if request.user.role == request.user.Role.ADMIN or request.user.permissions.can_manage_sales %}
             <li class="nav-item">
