@@ -1,0 +1,196 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Productos{% endblock %}
+
+{% block content %}
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+        <div>
+            <h2 class="fw-semibold mb-1">Productos</h2>
+            <p class="text-muted mb-0">
+                Catálogo de {{ company.name|default:"tu empresa" }}
+                <span class="text-muted">· {{ page_obj.paginator.count }} en total</span>
+            </p>
+        </div>
+
+        <a href="{% url 'inventory:create_product' %}" class="btn btn-erp-primary text-white">
+            <i class="fa-solid fa-plus"></i> Crear producto
+        </a>
+    </div>
+
+    <!-- Filtros -->
+    <form method="get" class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-4">
+                    <label class="form-label small text-muted mb-1">Buscar</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" name="q" value="{{ query }}" class="form-control"
+                            placeholder="Código, nombre o marca...">
+                    </div>
+                </div>
+
+                <div class="col-6 col-md-2">
+                    <label class="form-label small text-muted mb-1">Marca</label>
+                    <select name="brand" class="form-select">
+                        <option value="">Todas</option>
+                        {% for b in brands %}
+                            <option value="{{ b }}" {% if brand_filter == b %}selected{% endif %}>{{ b }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-6 col-md-2">
+                    <label class="form-label small text-muted mb-1">Estado</label>
+                    <select name="status" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="active" {% if status_filter == "active" %}selected{% endif %}>Activos</option>
+                        <option value="inactive" {% if status_filter == "inactive" %}selected{% endif %}>Inactivos</option>
+                    </select>
+                </div>
+
+                <div class="col-6 col-md-2">
+                    <label class="form-label small text-muted mb-1">Stock</label>
+                    <select name="stock" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="in" {% if stock_filter == "in" %}selected{% endif %}>Con stock</option>
+                        <option value="low" {% if stock_filter == "low" %}selected{% endif %}>Bajo (≤ {{ low_stock }})</option>
+                        <option value="out" {% if stock_filter == "out" %}selected{% endif %}>Sin stock</option>
+                    </select>
+                </div>
+
+                <div class="col-6 col-md-2">
+                    <label class="form-label small text-muted mb-1">Ordenar</label>
+                    <select name="sort" class="form-select">
+                        <option value="name" {% if sort == "name" %}selected{% endif %}>Nombre A-Z</option>
+                        <option value="-name" {% if sort == "-name" %}selected{% endif %}>Nombre Z-A</option>
+                        <option value="price" {% if sort == "price" %}selected{% endif %}>Precio ↑</option>
+                        <option value="-price" {% if sort == "-price" %}selected{% endif %}>Precio ↓</option>
+                        <option value="stock" {% if sort == "stock" %}selected{% endif %}>Stock ↑</option>
+                        <option value="-stock" {% if sort == "-stock" %}selected{% endif %}>Stock ↓</option>
+                        <option value="-created_at" {% if sort == "-created_at" %}selected{% endif %}>Más recientes</option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-2 d-grid">
+                    <button type="submit" class="btn btn-erp-primary text-white">
+                        <i class="fa-solid fa-filter"></i> Filtrar
+                    </button>
+                </div>
+            </div>
+
+            {% if query or brand_filter or status_filter or stock_filter %}
+                <div class="mt-2">
+                    <a href="{% url 'inventory:product_list' %}" class="small text-decoration-none">
+                        <i class="fa-solid fa-xmark me-1"></i>Limpiar filtros
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </form>
+
+    <!-- Tabla -->
+    {% if products %}
+        <div class="card border-0 shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>SKU</th>
+                            <th>Nombre</th>
+                            <th>Marca</th>
+                            <th class="text-end">Precio</th>
+                            <th class="text-center">Stock</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in products %}
+                            <tr>
+                                <td><span class="font-monospace small">{{ p.sku }}</span></td>
+                                <td class="fw-semibold">{{ p.name }}</td>
+                                <td>{{ p.brand|default:"—" }}</td>
+                                <td class="text-end">${{ p.price }}</td>
+                                <td class="text-center">
+                                    {% if p.stock == 0 %}
+                                        <span class="badge rounded-pill text-bg-danger">Sin stock</span>
+                                    {% elif p.stock <= low_stock %}
+                                        <span class="badge rounded-pill text-bg-warning text-dark">Bajo · {{ p.stock }}</span>
+                                    {% else %}
+                                        {{ p.stock }}
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if p.is_active %}
+                                        <span class="badge rounded-pill text-bg-success">Activo</span>
+                                    {% else %}
+                                        <span class="badge rounded-pill text-bg-secondary">Inactivo</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <a href="{% url "inventory:update_product" p.id %}" class="btn btn-sm btn-outline-warning" title="Actualizar">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </a>
+
+                                    {% if p.is_active %}
+                                        <a href="{% url "inventory:inactive_product" p.id %}" class="btn btn-sm btn-outline-danger" title="Inactivar">
+                                            <i class="fa-solid fa-ban"></i>
+                                        </a>
+                                    {% else %}
+                                        <a href="{% url "inventory:active_product" p.id %}" class="btn btn-sm btn-outline-success" title="Activar">
+                                            <i class="fa-solid fa-circle-check"></i>
+                                        </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% else %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center text-muted py-5">
+                <i class="fa-solid fa-box-open fa-lg mb-2 d-block"></i>
+                No se encontraron productos con esos filtros.
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Paginación -->
+    {% if page_obj.paginator.num_pages > 1 %}
+        <nav class="mt-3">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ query }}&brand={{ brand_filter }}&status={{ status_filter }}&stock={{ stock_filter }}&sort={{ sort }}">
+                            <i class="fa-solid fa-circle-left"></i>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link"><i class="fa-solid fa-circle-left"></i></span></li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    <li class="page-item {% if num == page_obj.number %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}&q={{ query }}&brand={{ brand_filter }}&status={{ status_filter }}&stock={{ stock_filter }}&sort={{ sort }}">
+                            {{ num }}
+                        </a>
+                    </li>
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ query }}&brand={{ brand_filter }}&status={{ status_filter }}&stock={{ stock_filter }}&sort={{ sort }}">
+                            <i class="fa-solid fa-circle-right"></i>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link"><i class="fa-solid fa-circle-right"></i></span></li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+{% endblock %}

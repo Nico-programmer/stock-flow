@@ -1,0 +1,100 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Crear producto{% endblock %}
+
+{% block content %}
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a href="{% url 'inventory:product_list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fa-solid fa-arrow-left"></i>
+        </a>
+        <div>
+            <h2 class="fw-semibold mb-0">Crear un nuevo producto</h2>
+            <p class="text-muted mb-0">El codigo SKU se genera automaticamente.</p>
+        </div>
+    </div>
+
+    <form method="POST" id="create-product-form">
+        {% csrf_token %}
+
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="text-uppercase text-muted small fw-semibold mb-3">Datos del producto</h6>
+
+                {# Muestra los messages de Django como SweetAlert; si viene redirect_url, redirige al cerrar. #}
+                {% if messages %}
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function () {
+                            const djangoMessages = [
+                                {% for message in messages %}
+                                    { text: "{{ message|escapejs }}", tag: "{{ message.tags|default:'info'|escapejs }}" },
+                                {% endfor %}
+                            ];
+
+                            const redirectUrl = "{{ redirect_url|default:''|escapejs }}";
+
+                            djangoMessages.forEach(function (msg, index) {
+                                let icon = 'info';
+                                if (msg.tag.includes('danger')) icon = 'error';
+                                else if (msg.tag.includes('success')) icon = 'success';
+                                else if (msg.tag.includes('warning')) icon = 'warning';
+
+                                Swal.fire({
+                                    icon: icon,
+                                    text: msg.text,
+                                    confirmButtonColor: '#1657D6',
+                                    allowEscapeKey: false,
+                                    allowOutsideClick: false,
+                                }).then(function () {
+                                    if (index === djangoMessages.length - 1 && redirectUrl) {
+                                        window.location.href = redirectUrl;
+                                    }
+                                });
+                            });
+                        });
+                    </script>
+                {% endif %}
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="company" class="form-label">Empresa</label>
+                        {# Solo visual: la empresa real se toma de request.user.company en la vista. #}
+                        <input type="text" id="company" class="form-control"
+                            value="{{ company_name }}" placeholder="{{ company_name }}" readonly>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="name" class="form-label">Nombre del producto</label>
+                        <input type="text" id="name" name="name" class="form-control"
+                            placeholder="Ingresa el nombre del producto" value="{{ name|default:'' }}">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="brand" class="form-label">Marca</label>
+                        <input type="text" id="brand" name="brand" class="form-control"
+                            placeholder="Ingresa la marca del producto" value="{{ brand|default:'' }}">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="price" class="form-label">Precio</label>
+                        <input type="number" id="price" name="price" class="form-control" min="0" step="0.01"
+                            placeholder="0.00" value="{{ price|default:'' }}">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="stock" class="form-label">Cantidad</label>
+                        <input type="number" id="stock" name="stock" class="form-control" min="0" step="1"
+                            placeholder="0" value="{{ stock|default:'' }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-erp-primary text-white">
+                <i class="fa-solid fa-floppy-disk"></i> Crear producto
+            </button>
+            <a href="{% url 'inventory:product_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+        </div>
+    </form>
+{% endblock %}

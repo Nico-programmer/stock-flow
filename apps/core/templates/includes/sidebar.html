@@ -40,9 +40,24 @@
 
         {% if request.user.role == request.user.Role.ADMIN or request.user.permissions.can_manage_inventory %}
             <li class="nav-item">
-                <a href="{% url 'inventory:inventory_list' %}" class="nav-link {% if request.resolver_match.namespace == 'inventory' %}active{% endif %}">
+                <a href="#inventory-submenu" data-bs-toggle="collapse" role="button"
+                   aria-expanded="{% if request.resolver_match.namespace == 'inventory' %}true{% else %}false{% endif %}"
+                   class="nav-link d-flex align-items-center {% if request.resolver_match.namespace == 'inventory' %}active{% endif %}">
                     <i class="fa-solid fa-boxes-stacked me-2"></i> Inventario
+                    <i class="fa-solid fa-chevron-down ms-auto small"></i>
                 </a>
+                <ul class="nav nav-pills flex-column gap-1 ms-3 mt-1 collapse {% if request.resolver_match.namespace == 'inventory' %}show{% endif %}" id="inventory-submenu">
+                    <li class="nav-item">
+                        <a href="{% url 'inventory:product_list' %}" class="nav-link {% if 'product' in request.resolver_match.url_name %}active{% endif %}">
+                            <i class="fa-solid fa-tags me-2"></i> Productos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'inventory:inventory_list' %}" class="nav-link {% if 'inventory' in request.resolver_match.url_name %}active{% endif %}">
+                            <i class="fa-solid fa-warehouse me-2"></i> Inventario
+                        </a>
+                    </li>
+                </ul>
             </li>
         {% endif %}
 
