@@ -19,10 +19,14 @@ from django.db import transaction, IntegrityError
 from .models import *
 from .utils import empresa_del_usuario, generar_sku_unico
 
+"""------------------------------------------------------------------ Inventory Views ------------------------------------------------------------------"""
+
 # Inventario
 @login_required
 def inventory_list(request):
-    return render(request, "inventory_list.html")
+    return render(request, "inventory/inventory_list.html")
+
+"""------------------------------------------------------------------ Products Views ------------------------------------------------------------------"""
 
 # Umbral de "stock bajo": a partir de acá el producto se marca en amarillo.
 LOW_STOCK = 5
