@@ -58,34 +58,47 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label for="company" class="form-label">Empresa</label>
-                        {# Solo visual: la empresa real se toma de request.user.company en la vista. #}
-                        <input type="text" id="company" class="form-control"
-                            value="{{ product.company }}" placeholder="{{ product.company.name }}" readonly>
+                        {# Solo visual y no editable: la empresa la fija el producto. #}
+                        <input type="text" id="company" class="form-control bg-light"
+                            value="{{ product.company.name }}" disabled>
                     </div>
 
                     <div class="col-md-6">
                         <label for="name" class="form-label">Nombre del producto</label>
                         <input type="text" id="name" name="name" class="form-control"
-                            placeholder="Ingresa el nombre del producto" value="{{ product.name }}" readonly>
+                            placeholder="Ingresa el nombre del producto" value="{{ product.name }}">
                     </div>
 
                     <div class="col-md-6">
                         <label for="brand" class="form-label">Marca</label>
                         <input type="text" id="brand" name="brand" class="form-control"
-                            placeholder="Ingresa la marca del producto" value="{{ product.brand }}" readonly>
+                            placeholder="Ingresa la marca del producto" value="{{ product.brand }}">
                     </div>
 
                     <div class="col-md-6">
-                        <label for="price" class="form-label">Precio</label>
+                        <label for="price" class="form-label">Precio (toda la empresa)</label>
                         <input type="number" id="price" name="price" class="form-control" min="0" step="0.01"
                             placeholder="0.00" value="{{ product.price|unlocalize }}">
                     </div>
+                </div>
+            </div>
+        </div>
 
-                    <div class="col-md-6">
-                        <label for="stock" class="form-label">Cantidad</label>
-                        <input type="number" id="stock" name="stock" class="form-control" min="0" step="1"
-                            placeholder="0" value="{{ product.stock|unlocalize }}">
-                    </div>
+        {# Stock por sucursal: un input por CADA sucursal de la empresa (bs puede ser None si aun no tiene fila). #}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="text-uppercase text-muted small fw-semibold mb-3">Stock por sucursal</h6>
+                <div class="row g-3">
+                    {% for b, bs in filas %}
+                        <div class="col-md-6">
+                            <label for="stock_{{ b.id }}" class="form-label">{{ b.name }}</label>
+                            <input type="number" id="stock_{{ b.id }}" name="stock_{{ b.id }}"
+                                class="form-control" min="0" step="1" placeholder="0"
+                                value="{% if bs %}{{ bs.stock|unlocalize }}{% else %}0{% endif %}">
+                        </div>
+                    {% empty %}
+                        <div class="col-12 text-muted small">La empresa no tiene sucursales activas.</div>
+                    {% endfor %}
                 </div>
             </div>
         </div>

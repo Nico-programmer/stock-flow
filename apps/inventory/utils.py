@@ -1,6 +1,8 @@
 import random
 import string
 
+from apps.companies.models import Branch
+
 from .models import ProductModel
 
 
@@ -32,3 +34,29 @@ def empresa_del_usuario(user):
     if user.branch_id:
         return user.branch.company
     return None
+
+
+def sucursales_del_usuario(user):
+    # Sucursales sobre las que el usuario puede operar:
+    #   - manager/empleado -> solo la suya
+    #   - admin            -> todas las activas de su empresa
+    #   - superuser        -> todas las activas del sistema
+    if user.branch_id:
+        return Branch.objects.filter(id=user.branch_id)
+    if user.is_superuser:
+        return Branch.objects.filter(is_active=True)
+    company = empresa_del_usuario(user)
+    if company:
+        return company.branches.filter(is_active=True)
+    return Branch.objects.none()
+
+
+def sucursales_de_empresa(user):
+    # Todas las sucursales activas de la empresa del usuario (para elegir a cual
+    # asignar stock al crear un producto, no solo la propia). Superuser -> todas.
+    company = empresa_del_usuario(user)
+    if company:
+        return company.branches.filter(is_active=True)
+    if user.is_superuser:
+        return Branch.objects.filter(is_active=True)
+    return Branch.objects.none()

@@ -58,9 +58,20 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label for="company" class="form-label">Empresa</label>
-                        {# Solo visual: la empresa real se toma de request.user.company en la vista. #}
-                        <input type="text" id="company" class="form-control"
-                            value="{{ company_name }}" placeholder="{{ company_name }}" readonly>
+                        {% if companies %}
+                            {# Superuser sin empresa: la elige. Al cambiar recarga con ?company=<id>. #}
+                            <select id="company" name="company" class="form-select"
+                                onchange="window.location.href='?company=' + this.value">
+                                <option value="" disabled {% if not selected_company %}selected{% endif %}>Selecciona una empresa</option>
+                                {% for c in companies %}
+                                    <option value="{{ c.id }}" {% if selected_company == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+                                {% endfor %}
+                            </select>
+                        {% else %}
+                            {# Resto de usuarios: la empresa la fija el usuario logueado, no se toca. #}
+                            <input type="text" id="company" class="form-control bg-light"
+                                value="{{ company_name }}" disabled>
+                        {% endif %}
                     </div>
 
                     <div class="col-md-6">
@@ -76,16 +87,34 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label for="price" class="form-label">Precio</label>
+                        <label for="price" class="form-label">Precio (toda la empresa)</label>
                         <input type="number" id="price" name="price" class="form-control" min="0" step="0.01"
                             placeholder="0.00" value="{{ price|default:'' }}">
                     </div>
+                </div>
+            </div>
+        </div>
 
-                    <div class="col-md-6">
-                        <label for="stock" class="form-label">Cantidad</label>
-                        <input type="number" id="stock" name="stock" class="form-control" min="0" step="1"
-                            placeholder="0" value="{{ stock|default:'' }}">
-                    </div>
+        {# Stock inicial por sucursal: un input name="stock_<branch_id>" por cada sucursal de la empresa. #}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <h6 class="text-uppercase text-muted small fw-semibold mb-3">Stock inicial por sucursal</h6>
+                <div class="row g-3">
+                    {% for b, val in filas %}
+                        <div class="col-md-6">
+                            <label for="stock_{{ b.id }}" class="form-label">{{ b.name }}</label>
+                            <input type="number" id="stock_{{ b.id }}" name="stock_{{ b.id }}"
+                                class="form-control" min="0" step="1" placeholder="0" value="{{ val }}">
+                        </div>
+                    {% empty %}
+                        <div class="col-12 text-muted small">
+                            {% if companies and not selected_company %}
+                                Selecciona una empresa para ver sus sucursales.
+                            {% else %}
+                                La empresa no tiene sucursales activas.
+                            {% endif %}
+                        </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>

@@ -10,10 +10,8 @@ from django.urls import reverse
 from django.contrib import messages
 
 # Import paginator
-from django.core.paginator import Paginator
 from django.core.exceptions import ValidationError
-from django.db.models import Q, Case, When, Value, IntegerField, F
-from itertools import groupby
+from django.db.models import Case, When, Value, IntegerField, F
 
 from django.shortcuts import render, redirect, get_object_or_404
 
@@ -79,88 +77,30 @@ def logout_view(request):
 @login_required
 @superuser_required
 def userList_view(request):
-    # Lista de usuarios agrupada por empresa, con filtros y paginación.
-
-    # Parámetros de filtro que llegan por querystring (?q=...&role=...&permission=...&company=...).
-    query = request.GET.get('q', '').strip()
-    role_filter = request.GET.get('role', '')
-    permission_filter = request.GET.get('permission', '')
-    company_filter = request.GET.get('company', '')
-
+    # Lista de usuarios. Busqueda / orden / paginacion los hace DataTables en el cliente.
     users = (
         CustomUser.objects
-        # select_related: trae en el mismo query las relaciones que se usan al pintar la lista (evita N+1).
+        # select_related: trae las relaciones que se usan al pintar la lista (evita N+1).
         .select_related('permissions', 'company', 'branch', 'branch__company')
         .annotate(
-            # "Empresa efectiva" del usuario, sin importar el rol:
-            #   admin            -> company_id directo
-            #   manager/employee -> company_id de su sucursal
-            # Se necesita como campo calculado para poder filtrar y agrupar por empresa de forma uniforme.
+            # "Empresa efectiva": admin -> company_id; manager/employee -> company_id de su sucursal.
             effective_company_id=Case(
                 When(company__isnull=False, then=F('company_id')),
                 default=F('branch__company_id'),
                 output_field=IntegerField(),
-            )
+            ),
+            # Prioridad de rol para el orden inicial (Admin -> Gerente -> Empleado).
+            role_order=Case(
+                When(role=CustomUser.Role.ADMIN, then=Value(0)),
+                When(role=CustomUser.Role.MANAGER, then=Value(1)),
+                default=Value(2),
+                output_field=IntegerField(),
+            ),
         )
+        .order_by('effective_company_id', 'role_order', 'first_name', 'last_name')
     )
 
-    # Búsqueda de texto libre sobre nombre / usuario / email.
-    if query:
-        users = users.filter(
-            Q(first_name__icontains=query) |
-            Q(last_name__icontains=query) |
-            Q(username__icontains=query) |
-            Q(email__icontains=query)
-        )
-
-    if role_filter:
-        users = users.filter(role=role_filter)
-
-    # permission_filter llega como nombre de campo ('can_manage_sales', ...); se arma el lookup dinámico
-    # permissions__can_manage_sales=True. Solo matchea manager/employee (admin no tiene fila de permisos).
-    if permission_filter:
-        users = users.filter(**{f'permissions__{permission_filter}': True})
-
-    # Filtra por empresa usando el campo calculado arriba.
-    if company_filter:
-        users = users.filter(effective_company_id=company_filter)
-
-    # Orden final: primero por empresa, luego rol (Admin -> Gerente -> Empleado), luego nombre.
-    # role_order es un campo calculado solo para poder ordenar por esa prioridad.
-    users = users.annotate(
-        role_order=Case(
-            When(role=CustomUser.Role.ADMIN, then=Value(0)),
-            When(role=CustomUser.Role.MANAGER, then=Value(1)),
-            default=Value(2),
-            output_field=IntegerField(),
-        )
-    ).order_by('effective_company_id', 'role_order', 'first_name', 'last_name')
-
-    # Paginación: 10 por página. ?page=N elige la página.
-    paginator = Paginator(users, 10)
-    page_obj = paginator.get_page(request.GET.get('page'))
-
-    # Agrupamiento por empresa hecho en Python. No se usa {% regroup %} de Django porque este
-    # requiere un atributo FK directo y acá la empresa es un campo calculado (effective_company_id).
-    # groupby agrupa elementos CONSECUTIVOS -> depende de que el queryset ya venga ordenado por empresa.
-    grouped = []
-    for company_id, group in groupby(page_obj.object_list, key=lambda u: u.effective_company_id):
-        group_list = list(group)
-        first_user = group_list[0]
-        # Se recupera el objeto Company real (para mostrar su nombre) desde el primer usuario del grupo.
-        company_obj = first_user.company or (first_user.branch.company if first_user.branch else None)
-        grouped.append({'company': company_obj, 'users': group_list})
-
-    context = {
-        'page_obj': page_obj,
-        'grouped': grouped,
-        'query': query,
-        'role_filter': role_filter,
-        'permission_filter': permission_filter,
-        'company_filter': company_filter,
-        'companies': Company.objects.filter(is_active=True),
-    }
-    return render(request, "users/user_list.html", context)
+    return render(request, "users/user_list.html", {'users': users})
 
 from django.urls import reverse
 

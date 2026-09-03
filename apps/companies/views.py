@@ -8,9 +8,7 @@ from django.contrib.auth.decorators import login_required
 from apps.accounts.decorators import superuser_required
 from django.http import JsonResponse
 
-# Import paginator's
-from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Count
 
 # Import messages
 from django.contrib import messages
@@ -38,42 +36,16 @@ def company_info(request, company_id):
     context = {'company': company, 'branch': branch}
     return render(request, "companies/company_info.html", context)
 
-# Listado de empresas con búsqueda, filtro por estado y paginación.
+# Listado de empresas. Busqueda / orden / filtro por estado / paginacion: DataTables (cliente).
 @login_required
 @superuser_required
 def companies_list(request):
-    # Parámetros que llegan por querystring (?q=...&status=...).
-    query = request.GET.get('q', '').strip()
-    status_filter = request.GET.get('status', '') # 'active' / 'inactive' / ''
-
-    companies = Company.objects.all()
-
-    if query:
-        # Busca en el nombre de la empresa, en la dirección de cualquiera de sus sucursales
-        # y en el teléfono. El JOIN a branches puede devolver la misma empresa varias veces...
-        companies = companies.filter(
-            Q(name__icontains = query) |
-            Q(branches__address__icontains = query) |
-            Q(phone_number__icontains = query)
-        ).distinct() # ...por eso distinct(): colapsa esos duplicados.
-
-    if status_filter == 'active':
-        companies = companies.filter(is_active=True)
-    elif status_filter == 'inactive':
-        companies = companies.filter(is_active=False)
-
-    companies = companies.order_by('name')
-
-    # Paginación: 10 por página, igual que el listado de usuarios. ?page=N elige la página.
-    paginator = Paginator(companies, 10)
-    page_obj = paginator.get_page(request.GET.get('page'))
-
-    context = {
-        'page_obj': page_obj,
-        'query': query,
-        'status_filter': status_filter,
-    }
-    return render(request, "companies_list.html", context)
+    companies = (
+        Company.objects
+        .annotate(branch_count=Count('branches'))
+        .order_by('name')
+    )
+    return render(request, "companies_list.html", {'companies': companies})
 
 # Alta de una empresa junto con una o varias sucursales, en la misma transacción.
 @login_required
@@ -149,7 +121,7 @@ def create_companies(request):
             messages.error(request, 'Ocurrió un error al crear la empresa. Intenta de nuevo.')
             return render(request, 'companies/create_companies.html')
 
-        return redirect('companies_list') # Post/Redirect/Get: evita reenviar el form si se recarga
+        return redirect('company:list') # Post/Redirect/Get: evita reenviar el form si se recarga
     # GET: form vacío.
     return render(request, 'companies/create_companies.html')
 
