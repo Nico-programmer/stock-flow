@@ -1,0 +1,44 @@
+:root {
+    --erp-navy: #0C1F4B;
+    --erp-navy-soft: #16295C;
+    --erp-blue: #1657D6;
+    --erp-blue-dark: #0B3FA8;
+    --erp-tan: #D4A574;
+}
+
+body {
+    min-height: 100vh;
+}
+
+.login-brand {
+    background: linear-gradient(160deg, var(--erp-navy) 0%, var(--erp-navy-soft) 55%, var(--erp-blue-dark) 100%);
+    min-height: 100vh;
+}
+
+.login-brand .brand-icon {
+    color: var(--erp-tan);
+}
+
+.login-form-side {
+    min-height: 100vh;
+}
+
+.btn-erp-primary {
+    background-color: var(--erp-blue);
+    border-color: var(--erp-blue);
+}
+
+.btn-erp-primary:hover,
+.btn-erp-primary:focus {
+    background-color: var(--erp-blue-dark);
+    border-color: var(--erp-blue-dark);
+}
+
+.form-control:focus {
+    border-color: var(--erp-blue);
+    box-shadow: 0 0 0 .25rem rgba(22, 87, 214, .15);
+}
+
+.input-group-text {
+    background-color: #f8f9fa;
+}

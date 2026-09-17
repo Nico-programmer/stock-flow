@@ -1,0 +1,26 @@
+# Database
+db.sqlite3
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+
+# Environment files / secrets
+.env
+
+# User-uploaded media
+media/
+
+# Editor
+.vscode/
+.idea/
+
+# Claude Code
+CLAUDE.md
+.claude/
+13 instrucciones para ahorrar tokens en Claude y Claude Code.md
