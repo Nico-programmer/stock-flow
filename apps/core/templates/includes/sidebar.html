@@ -70,7 +70,7 @@
                     </a>
                 </li>
             {% endif %}
-        {% endcomment %}
+        
 
         {% if request.user.role == request.user.Role.ADMIN or request.user.permissions.can_manage_employees %}
             <li class="nav-item">
@@ -98,6 +98,7 @@
                 <i class="fa-solid fa-building me-2"></i> Info. compañía
             </a>
         </li>
+        {% endcomment %}
 
     </ul>
 
