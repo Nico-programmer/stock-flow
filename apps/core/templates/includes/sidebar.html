@@ -61,8 +61,6 @@
             </li>
         {% endif %}
 
-        {% comment %}
-
         {% if request.user.role == request.user.Role.ADMIN or request.user.permissions.can_manage_sales %}
             <li class="nav-item">
                 <a href="{% url 'sales_list' %}"
@@ -90,11 +88,7 @@
             </li>
         {% endif %}
 
-        {% endcomment %}
-
         <li><hr class="text-white-50 my-2"></li>
-
-        {% comment %}
 
         <li class="nav-item">
             <a href="{% url 'company:info' %}"
@@ -103,7 +97,6 @@
             </a>
         </li>
 
-        {% endcomment %}
     </ul>
 
     <div class="mt-auto pt-3 border-top border-secondary-subtle">
