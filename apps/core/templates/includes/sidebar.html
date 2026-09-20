@@ -61,14 +61,16 @@
             </li>
         {% endif %}
 
-        {% if request.user.role == request.user.Role.ADMIN or request.user.permissions.can_manage_sales %}
-            <li class="nav-item">
-                <a href="{% url 'sales_list' %}"
-                class="nav-link {% if request.resolver_match.url_name == 'sales_list' %}active{% endif %}">
-                    <i class="fa-solid fa-cart-shopping me-2"></i> Ventas
-                </a>
-            </li>
-        {% endif %}
+        {% comment %}
+            {% if request.user.role == request.user.Role.ADMIN or request.user.permissions.can_manage_sales %}
+                <li class="nav-item">
+                    <a href="{% url 'sales_list' %}"
+                    class="nav-link {% if request.resolver_match.url_name == 'sales_list' %}active{% endif %}">
+                        <i class="fa-solid fa-cart-shopping me-2"></i> Ventas
+                    </a>
+                </li>
+            {% endif %}
+        {% endcomment %}
 
         {% if request.user.role == request.user.Role.ADMIN or request.user.permissions.can_manage_employees %}
             <li class="nav-item">
