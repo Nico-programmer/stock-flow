@@ -2,120 +2,111 @@
 {% load static %}
 
 {% block title %}Gestión de usuarios{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/products.css' %}">{% endblock %}
 
 {% block content %}
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
-        <div>
-            <h2 class="fw-semibold mb-1">Gestión de usuarios</h2>
-            <p class="text-muted mb-0">Administra a los usuarios que pertenecen a tu empresa.</p>
-        </div>
-
-        <a href="{% url "account:create" %}" class="btn btn-erp-primary text-white"><i class="fa-solid fa-plus"></i> Crear usuario</a>
+<div class="page-header">
+    <div>
+        <span class="section-label">Administración</span>
+        <h1>Gestión de usuarios</h1>
+        <p>Administra a los usuarios que pertenecen a tu empresa.</p>
     </div>
+    <a href="{% url "account:create" %}" class="btn btn-brand"><i class="fa-solid fa-plus"></i> Crear usuario</a>
+</div>
 
-    <div class="card border-0 shadow-sm">
-        <div class="table-responsive">
-            <table class="table table-hover table-sm align-middle mb-0 js-datatable">
-                <thead class="table-light">
+<div class="card-surface p-3 p-md-4">
+    <div class="table-responsive">
+        <table class="table-app table-stack-mobile">
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th>Rol</th>
+                    <th>Empresa</th>
+                    <th>Sucursal</th>
+                    <th>Permisos</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
                     <tr>
-                        <th>Usuario</th>
-                        <th class="text-center nosort" data-filter>Rol</th>
-                        <th data-filter>Empresa</th>
-                        <th data-filter>Sucursal</th>
-                        <th class="nosort">Permisos</th>
-                        <th class="text-center nosort" data-filter>Estado</th>
-                        <th class="text-end nosort">Acciones</th>
+                        <td data-label="Usuario">
+                            <div class="fw-semibold">
+                                {{ user.first_name|default:"" }} {{ user.last_name|default:"" }}
+                                {% if not user.first_name and not user.last_name %}<span class="text-muted-soft">{{ user.username }}</span>{% endif %}
+                            </div>
+                            <div class="small text-muted-soft">{{ user.username }} · {{ user.email }}</div>
+                        </td>
+
+                        <td data-label="Rol">
+                            {% if user.role == user.Role.ADMIN %}
+                                <i class="fa-solid fa-user-shield" title="{{ user.get_role_display }}"></i>
+                            {% elif user.role == user.Role.MANAGER %}
+                                <i class="fa-solid fa-user-pen" title="{{ user.get_role_display }}"></i>
+                            {% else %}
+                                <i class="fa-solid fa-user" title="{{ user.get_role_display }}"></i>
+                            {% endif %}
+                            {{ user.get_role_display }}
+                        </td>
+
+                        <td data-label="Empresa">{% if user.company %}{{ user.company.name }}{% elif user.branch %}{{ user.branch.company.name }}{% else %}—{% endif %}</td>
+                        <td data-label="Sucursal">{% if user.branch %}{{ user.branch.name }}{% else %}—{% endif %}</td>
+
+                        <td data-label="Permisos">
+                            {% if user.role == user.Role.ADMIN %}
+                                <span class="text-muted-soft small">Acceso total</span>
+                            {% elif user.permissions %}
+                                {% with perms=user.permissions %}
+                                    <span class="d-inline-flex gap-2">
+                                        {% if perms.can_manage_inventory %}<i class="fa-solid fa-boxes-stacked" title="Inventario"></i>{% endif %}
+                                        {% if perms.can_manage_sales %}<i class="fa-solid fa-cart-shopping" title="Ventas"></i>{% endif %}
+                                        {% if perms.can_manage_employees %}<i class="fa-solid fa-id-badge" title="Empleados"></i>{% endif %}
+                                        {% if perms.can_view_reports %}<i class="fa-solid fa-chart-line" title="Reportes"></i>{% endif %}
+                                        {% if not perms.can_manage_inventory and not perms.can_manage_sales and not perms.can_manage_employees and not perms.can_view_reports %}
+                                            <span class="badge-stock out">Sin permisos</span>
+                                        {% endif %}
+                                    </span>
+                                {% endwith %}
+                            {% else %}
+                                <span class="badge-stock out">Sin permisos</span>
+                            {% endif %}
+                        </td>
+
+                        <td data-label="Estado">
+                            {% if user.is_active %}
+                                <span class="badge-stock ok">Activo</span>
+                            {% else %}
+                                <span class="badge-stock out">Inactivo</span>
+                            {% endif %}
+                        </td>
+
+                        <td data-label="Acciones" class="text-end text-nowrap">
+                            {% if user.is_active %}
+                                <a href="{% url 'account:update' user.id %}" class="btn btn-outline-brand btn-sm" title="Actualizar">
+                                    <i class="fa-solid fa-pen"></i>
+                                </a>
+                                <form method="POST" action="{% url 'account:deactivate' user.id %}" onsubmit="return confirm('¿Seguro que deseas desactivar a este usuario?');" style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-brand btn-sm" title="Desactivar">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </form>
+                            {% else %}
+                                <form method="POST" action="{% url 'account:active' user.id %}" onsubmit="return confirm('¿Deseas reactivar a este usuario?');" style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-brand btn-sm" title="Reactivar">
+                                        <i class="fa-solid fa-rotate-left"></i>
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </td>
                     </tr>
-                </thead>
-                <tbody>
-                    {% for user in users %}
-                        <tr>
-                            <td>
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="d-flex align-items-center justify-content-center rounded-circle text-white flex-shrink-0"
-                                        style="width: 30px; height: 30px; font-size: .8rem; background-color: var(--erp-navy);">
-                                        {% if user.role == user.Role.ADMIN %}<i class="fa-solid fa-user-shield"></i>
-                                        {% elif user.role == user.Role.MANAGER %}<i class="fa-solid fa-user-pen"></i>
-                                        {% else %}<i class="fa-solid fa-user"></i>{% endif %}
-                                    </div>
-                                    <div class="lh-sm">
-                                        <div class="fw-semibold">
-                                            {{ user.first_name|default:"" }} {{ user.last_name|default:"" }}
-                                            {% if not user.first_name and not user.last_name %}<span class="text-muted">{{ user.username }}</span>{% endif %}
-                                        </div>
-                                        <div class="small text-muted">{{ user.username }} · {{ user.email }}</div>
-                                    </div>
-                                </div>
-                            </td>
-
-                            {# Rol como icono; el texto real va en data-search para busqueda/filtro. #}
-                            <td class="text-center" data-search="{{ user.get_role_display }}">
-                                {% if user.role == user.Role.ADMIN %}
-                                    <i class="fa-solid fa-user-shield text-primary" title="{{ user.get_role_display }}"></i>
-                                {% elif user.role == user.Role.MANAGER %}
-                                    <i class="fa-solid fa-user-pen text-warning" title="{{ user.get_role_display }}"></i>
-                                {% else %}
-                                    <i class="fa-solid fa-user text-secondary" title="{{ user.get_role_display }}"></i>
-                                {% endif %}
-                            </td>
-
-                            <td>{% if user.company %}{{ user.company.name }}{% elif user.branch %}{{ user.branch.company.name }}{% else %}—{% endif %}</td>
-                            <td>{% if user.branch %}{{ user.branch.name }}{% else %}—{% endif %}</td>
-
-                            {# Permisos como iconos con tooltip. #}
-                            <td>
-                                {% if user.role == user.Role.ADMIN %}
-                                    <span class="text-muted small">Acceso total</span>
-                                {% elif user.permissions %}
-                                    {% with perms=user.permissions %}
-                                        <span class="d-inline-flex gap-2 fs-6">
-                                            {% if perms.can_manage_inventory %}<i class="fa-solid fa-boxes-stacked text-secondary" title="Inventario"></i>{% endif %}
-                                            {% if perms.can_manage_sales %}<i class="fa-solid fa-cart-shopping text-secondary" title="Ventas"></i>{% endif %}
-                                            {% if perms.can_manage_employees %}<i class="fa-solid fa-id-badge text-secondary" title="Empleados"></i>{% endif %}
-                                            {% if perms.can_view_reports %}<i class="fa-solid fa-chart-line text-secondary" title="Reportes"></i>{% endif %}
-                                            {% if not perms.can_manage_inventory and not perms.can_manage_sales and not perms.can_manage_employees and not perms.can_view_reports %}
-                                                <span class="badge rounded-pill text-bg-warning text-dark">Sin permisos</span>
-                                            {% endif %}
-                                        </span>
-                                    {% endwith %}
-                                {% else %}
-                                    <span class="badge rounded-pill text-bg-warning text-dark">Sin permisos</span>
-                                {% endif %}
-                            </td>
-
-                            {# Estado como icono; texto real en data-search. #}
-                            <td class="text-center" data-search="{% if user.is_active %}Activo{% else %}Inactivo{% endif %}">
-                                {% if user.is_active %}
-                                    <i class="fa-solid fa-circle-check text-success" title="Activo"></i>
-                                {% else %}
-                                    <i class="fa-solid fa-circle-xmark text-secondary" title="Inactivo"></i>
-                                {% endif %}
-                            </td>
-
-                            <td class="text-end text-nowrap">
-                                {% if user.is_active %}
-                                    <a href="{% url 'account:update' user.id %}" class="btn btn-sm btn-outline-secondary" title="Actualizar">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </a>
-                                    <form method="POST" action="{% url 'account:deactivate' user.id %}" onsubmit="return confirm('¿Seguro que deseas desactivar a este usuario?');" style="display:inline;">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Desactivar">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
-                                    </form>
-                                {% else %}
-                                    <form method="POST" action="{% url 'account:active' user.id %}" onsubmit="return confirm('¿Deseas reactivar a este usuario?');" style="display:inline;">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-outline-success" title="Reactivar">
-                                            <i class="fa-solid fa-rotate-left"></i>
-                                        </button>
-                                    </form>
-                                {% endif %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                {% empty %}
+                    <tr><td colspan="7"><div class="empty-state">Aún no hay usuarios registrados.</div></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
+</div>
 {% endblock %}

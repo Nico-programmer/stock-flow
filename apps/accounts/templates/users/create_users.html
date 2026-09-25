@@ -2,182 +2,180 @@
 {% load static %}
 
 {% block title %}Crear usuario{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/forms.css' %}">{% endblock %}
 
 {% block content %}
-    <div class="d-flex align-items-center gap-2 mb-4">
-        <a href="{% url 'account:list' %}" class="btn btn-outline-secondary btn-sm">
-            <i class="fa-solid fa-arrow-left"></i>
-        </a>
-        <div>
-            <h2 class="fw-semibold mb-0">Crear un nuevo usuario</h2>
-            <p class="text-muted mb-0">Completa los datos y asigna sus permisos.</p>
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'account:list' %}" class="btn btn-outline-brand btn-sm">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="mb-0">Crear un nuevo usuario</h1>
+                <p>Completa los datos y asigna sus permisos.</p>
+            </div>
         </div>
     </div>
+
+    {% if messages %}
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const djangoMessages = [
+                    {% for message in messages %}
+                        { text: "{{ message|escapejs }}", tag: "{{ message.tags|default:'info'|escapejs }}" },
+                    {% endfor %}
+                ];
+
+                const redirectUrl = "{{ redirect_url|default:''|escapejs }}";
+
+                djangoMessages.forEach(function (msg, index) {
+                    let icon = 'info';
+                    if (msg.tag.includes('danger')) icon = 'error';
+                    else if (msg.tag.includes('success')) icon = 'success';
+                    else if (msg.tag.includes('warning')) icon = 'warning';
+
+                    Swal.fire({
+                        icon: icon,
+                        text: msg.text,
+                        confirmButtonColor: '#1657D6',
+                        allowEscapeKey: false,
+                        allowOutsideClick: false,
+                    }).then(function () {
+                        if (index === djangoMessages.length - 1 && redirectUrl) {
+                            window.location.href = redirectUrl;
+                        }
+                    });
+                });
+            });
+        </script>
+    {% endif %}
 
     <form method="POST" id="create-user-form">
         {% csrf_token %}
 
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-body">
-                <h6 class="text-uppercase text-muted small fw-semibold mb-3">Datos personales</h6>
+        <div class="card-surface form-card mb-3">
+            <h6 class="form-section-title">Datos personales</h6>
 
-                {% if messages %}
-                    <script>
-                        document.addEventListener('DOMContentLoaded', function () {
-                            const djangoMessages = [
-                                {% for message in messages %}
-                                    { text: "{{ message|escapejs }}", tag: "{{ message.tags|default:'info'|escapejs }}" },
-                                {% endfor %}
-                            ];
+            <div class="form-two-col">
+                <div>
+                    <label for="company" class="form-label">Empresa</label>
+                    <select name="company" id="company" class="form-select">
+                        <option value="" disabled selected>Selecciona la empresa</option>
+                        {% for c in companies %}
+                            <option value="{{ c.id }}" {% if c.id|stringformat:"s" == selected_company %}selected{% endif %}>{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-                            const redirectUrl = "{{ redirect_url|default:''|escapejs }}";
+                <div>
+                    <label for="branch" class="form-label">Sucursal</label>
+                    <select name="branch" id="branch" class="form-select" data-current="{{ selected_branch }}" disabled>
+                        <option value="" disabled selected>Primero selecciona una empresa</option>
+                    </select>
+                </div>
 
-                            djangoMessages.forEach(function (msg, index) {
-                                let icon = 'info';
-                                if (msg.tag.includes('danger')) icon = 'error';
-                                else if (msg.tag.includes('success')) icon = 'success';
-                                else if (msg.tag.includes('warning')) icon = 'warning';
+                <div>
+                    <label for="first_name" class="form-label">Nombres</label>
+                    <input type="text" id="first_name" name="first_name" class="form-control"
+                        placeholder="Nombre del usuario" value="{{ first_name|default:'' }}">
+                </div>
 
-                                Swal.fire({
-                                    icon: icon,
-                                    text: msg.text,
-                                    confirmButtonColor: '#1657D6',
-                                    allowEscapeKey: false,
-                                    allowOutsideClick: false,
-                                }).then(function () {
-                                    if (index === djangoMessages.length - 1 && redirectUrl) {
-                                        window.location.href = redirectUrl;
-                                    }
-                                });
-                            });
-                        });
-                    </script>
-                {% endif %}
+                <div>
+                    <label for="last_name" class="form-label">Apellidos</label>
+                    <input type="text" id="last_name" name="last_name" class="form-control"
+                        placeholder="Apellidos del usuario" value="{{ last_name|default:'' }}">
+                </div>
 
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="company" class="form-label">Empresa</label>
-                        <select name="company" id="company" class="form-select">
-                            <option value="" disabled selected>Selecciona la empresa</option>
-                            {% for c in companies %}
-                                <option value="{{ c.id }}" {% if c.id|stringformat:"s" == selected_company %}selected{% endif %}>{{ c.name }}</option>
-                            {% endfor %}
-                        </select>
+                <div>
+                    <label for="username" class="form-label">Nombre de usuario</label>
+                    <input type="text" id="username" name="username" class="form-control"
+                        placeholder="Asigna un nombre de usuario" value="{{ username|default:'' }}">
+                </div>
+
+                <div>
+                    <label for="email" class="form-label">Correo electrónico</label>
+                    <input type="email" id="email" name="email" class="form-control" placeholder="correo@ejemplo.com" value="{{ email|default:'' }}">
+                </div>
+
+                <div>
+                    <label for="password" class="form-label">Contraseña</label>
+                    <div class="input-group">
+                        <input type="password" id="password" name="password" class="form-control" placeholder="Contraseña">
+                        <button type="button" class="btn btn-outline-brand toggle-password" data-target="password">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
                     </div>
+                </div>
 
-                    <div class="col-md-6">
-                        <label for="branch" class="form-label">Sucursal</label>
-                        <select name="branch" id="branch" class="form-select" data-current="{{ selected_branch }}" disabled>
-                            <option value="" disabled selected>Primero selecciona una empresa</option>
-                        </select>
+                <div>
+                    <label for="password2" class="form-label">Confirmar contraseña</label>
+                    <div class="input-group">
+                        <input type="password" id="password2" name="password2" class="form-control" placeholder="Contraseña">
+                        <button type="button" class="btn btn-outline-brand toggle-password" data-target="password2">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
                     </div>
+                </div>
 
-                    <div class="col-md-6">
-                        <label for="first_name" class="form-label">Nombres</label>
-                        <input type="text" id="first_name" name="first_name" class="form-control"
-                            placeholder="Nombre del usuario" value="{{ first_name|default:'' }}">
+                <div>
+                    <label for="role" class="form-label">Rol</label>
+                    <select name="role" id="role" class="form-select">
+                        <option value="" disabled selected>Selecciona el rol del empleado</option>
+                        {% for value, label in roles %}
+                            <option value="{{ value }}" {% if value == selected_role %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-surface form-card mb-3">
+            <h6 class="form-section-title">Asignar permisos</h6>
+
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" name="can_manage_inventory" id="can_manage_inventory" {% if can_manage_inventory %}checked{% endif %}>
+                        <label class="form-check-label" for="can_manage_inventory">
+                            <i class="fa-solid fa-boxes-stacked me-1"></i> Manejo de inventario
+                        </label>
                     </div>
+                </div>
 
-                    <div class="col-md-6">
-                        <label for="last_name" class="form-label">Apellidos</label>
-                        <input type="text" id="last_name" name="last_name" class="form-control"
-                            placeholder="Apellidos del usuario" value="{{ last_name|default:'' }}">
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" name="can_manage_sales" id="can_manage_sales" {% if can_manage_sales %}checked{% endif %}>
+                        <label class="form-check-label" for="can_manage_sales">
+                            <i class="fa-solid fa-cart-shopping me-1"></i> Manejo de ventas
+                        </label>
                     </div>
+                </div>
 
-                    <div class="col-md-6">
-                        <label for="username" class="form-label">Nombre de usuario</label>
-                        <input type="text" id="username" name="username" class="form-control"
-                            placeholder="Asigna un nombre de usuario" value="{{ username|default:'' }}">
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" name="can_manage_employees" id="can_manage_employees" {% if can_manage_employees %}checked{% endif %}>
+                        <label class="form-check-label" for="can_manage_employees">
+                            <i class="fa-solid fa-id-badge me-1"></i> Manejo de empleados
+                        </label>
                     </div>
+                </div>
 
-                    <div class="col-md-6">
-                        <label for="email" class="form-label">Correo electrónico</label>
-                        <input type="email" id="email" name="email" class="form-control" placeholder="correo@ejemplo.com" value="{{ email|default:'' }}">
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="password" class="form-label">Contraseña</label>
-
-                        <div class="input-group">
-                            <input type="password" id="password" name="password" class="form-control" placeholder="Contraseña">
-                            <button type="button" class="btn btn-outline-secondary toggle-password" data-target="password">
-                                <i class="fa-solid fa-eye"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="password2" class="form-label">Confirmar contraseña</label>
-                        <div class="input-group">
-                            <input type="password" id="password2" name="password2" class="form-control" placeholder="Contraseña">
-                            <button type="button" class="btn btn-outline-secondary toggle-password" data-target="password2">
-                                <i class="fa-solid fa-eye"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="role" class="form-label">Rol</label>
-                        <select name="role" id="role" class="form-select">
-                            <option value="" disabled {% if not employee.role %}selected{% endif %}>Selecciona el rol del empleado</option>
-                            {% for value, label in roles %}
-                                <option value="{{ value }}" {% if value == selected_role %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" name="can_view_reports" id="can_view_reports" {% if can_view_reports %}checked{% endif %}>
+                        <label class="form-check-label" for="can_view_reports">
+                            <i class="fa-solid fa-chart-line me-1"></i> Manejo de reportes
+                        </label>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-body">
-                <h6 class="text-uppercase text-muted small fw-semibold mb-3">Asignar permisos</h6>
-
-                <div class="row g-2">
-                    <div class="col-md-6">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" role="switch" name="can_manage_inventory" id="can_manage_inventory" {% if can_manage_inventory %}checked{% endif %}>
-                            <label class="form-check-label" for="can_manage_inventory">
-                                <i class="fa-solid fa-boxes-stacked me-1"></i> Manejo de inventario
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" role="switch" name="can_manage_sales" id="can_manage_sales" {% if can_manage_sales %}checked{% endif %}>
-                            <label class="form-check-label" for="can_manage_sales">
-                                <i class="fa-solid fa-cart-shopping me-1"></i> Manejo de ventas
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" role="switch" name="can_manage_employees" id="can_manage_employees" {% if can_manage_employees %}checked{% endif %}>
-                            <label class="form-check-label" for="can_manage_employees">
-                                <i class="fa-solid fa-id-badge me-1"></i> Manejo de empleados
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" role="switch" name="can_view_reports" id="can_view_reports" {% if can_view_reports %}checked{% endif %}>
-                            <label class="form-check-label" for="can_view_reports">
-                                <i class="fa-solid fa-chart-line me-1"></i> Manejo de reportes
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-erp-primary text-white">
+        <div class="form-actions">
+            <a href="{% url 'account:list' %}" class="btn btn-outline-brand">Cancelar</a>
+            <button type="submit" class="btn btn-brand">
                 <i class="fa-solid fa-floppy-disk"></i> Crear usuario
             </button>
-            <a href="{% url 'account:list' %}" class="btn btn-outline-secondary">Cancelar</a>
         </div>
     </form>
 

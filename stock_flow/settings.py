@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-7)pmtovdj#@npt18-z!r-7(beymt7(_&9$#2v*s^(r)au4+w@v
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['5.189.159.184','localhost','127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']  # IP de producción '5.189.159.184' comentada para desarrollo
 
 
 # Application definition
@@ -79,19 +79,10 @@ WSGI_APPLICATION = 'stock_flow.wsgi.application'
 
 
 # Database
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME'),
-        'USER': os.environ.get('DB_USER'),
-        'PASSWORD': os.environ.get('DB_PASSWORD'),
-        'HOST': os.environ.get('DB_HOST'),
-        'PORT': os.environ.get('DB_PORT'),
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 

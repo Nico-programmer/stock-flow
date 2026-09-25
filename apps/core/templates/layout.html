@@ -1,18 +1,25 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
     <!-- Boostrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    
+
     <!-- Icons -->
     <script src="https://kit.fontawesome.com/5bb6ce43f9.js" crossorigin="anonymous"></script>
 
-    <!-- CSS -->
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <!-- CSS propio, dividido por responsabilidad -->
+    <link rel="stylesheet" href="{% static 'css/variables.css' %}">
+    <link rel="stylesheet" href="{% static 'css/layout.css' %}">
+    <link rel="stylesheet" href="{% static 'css/sidebar.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}">
+    {% block page_css %}{% endblock %}
 
     <!-- SweetAlert 2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -20,33 +27,39 @@
     <!-- Icon for app -->
     <link rel="icon" type="image/png" href="{% static "img/logo-icon.png" %}">
 
-    <!-- DataTables -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/2.1.8/css/dataTables.bootstrap5.min.css">
-
     <title>
-        {% block title %}Inicio{% endblock %} | StockFlow
+        {% block title %}Inicio{% endblock %} · StockFlow
     </title>
 </head>
-<body clas="bg-light">
-    
-    {% include "includes/sidebar.html" %}
+<body>
+    <div class="bg-decor" aria-hidden="true"><span class="blob blob-1"></span><span class="blob blob-2"></span><span class="blob blob-3"></span></div>
 
-    <div class="main-content">
-        {% include "includes/topbar.html" %}
+    <div class="app-shell">
 
-        <main class="p-3 p-md-4">
-            {% block content %}{% endblock %}
-        </main>
+        <div class="sidebar-desktop-slot d-none d-md-block">
+            {% include "includes/sidebar.html" %}
+        </div>
+
+        <div class="offcanvas offcanvas-start sidebar-offcanvas d-md-none" tabindex="-1" id="sidebarOffcanvas" aria-labelledby="sidebarOffcanvasLabel">
+            {% include "includes/sidebar.html" %}
+        </div>
+
+        <div class="app-main">
+            {% include "includes/topbar.html" %}
+
+            <main class="app-content">
+                {% include "includes/messages.html" %}
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+
     </div>
 
     <!-- Boostrap -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- DataTables -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/2.1.8/js/dataTables.bootstrap5.min.js"></script>
-
-    <script src="{% static "js/script.js" %}"></script>
+    <script src="{% static 'js/sidebar.js' %}"></script>
+    <script src="{% static 'js/main.js' %}"></script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

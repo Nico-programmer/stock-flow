@@ -1,0 +1,64 @@
+/* ============================================================
+   pages/products.css
+   Barra de filtros y tablas de listados (productos, categorías,
+   movimientos, almacenes, empresas, usuarios).
+   ============================================================ */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.filter-bar .search-field {
+  position: relative;
+  flex: 1;
+  min-width: min(220px, 100%);
+}
+
+.filter-bar .search-field .icon-placeholder {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-faint);
+}
+
+.filter-bar .search-field input { padding-left: 42px; }
+
+@media (max-width: 575.98px) {
+  .filter-bar .form-select { max-width: none !important; flex: 1 1 100%; }
+}
+
+/* Tabla -> tarjetas apiladas en móvil */
+@media (max-width: 767.98px) {
+  .table-stack-mobile thead { display: none; }
+  .table-stack-mobile, .table-stack-mobile tbody, .table-stack-mobile tr, .table-stack-mobile td {
+    display: block;
+    width: 100%;
+  }
+  .table-stack-mobile tr {
+    margin-bottom: 12px;
+    background: var(--surface-muted);
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    padding: 8px 2px;
+  }
+  .table-stack-mobile tbody td {
+    border: none;
+    padding: 8px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  .table-stack-mobile td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--ink-faint);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+}

@@ -1,0 +1,59 @@
+{% extends "layout.html" %}
+{% load static %}
+{% block title %}Inicio{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/dashboard.css' %}">{% endblock %}
+
+{% block content %}
+{# Plantilla nueva, aun no conectada a core/views.py. Datos de ejemplo hasta que la vista genere kpis/grafico/dona/movimientos_recientes/alertas_stock. #}
+<div class="page-header">
+  <div>
+    <span class="section-label">Panel general</span>
+    <h1>Hola, {{ request.user.first_name|default:"usuario" }}</h1>
+    <p>Resumen del inventario.</p>
+  </div>
+  <a href="{% url 'inventory:create_product' %}" class="btn btn-brand">
+    <i class="fa-solid fa-plus"></i> Nuevo producto
+  </a>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi-card kpi-blue">
+    <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-boxes-stacked"></i></span></div>
+    <span class="kpi-value">—</span>
+    <span class="kpi-label">Productos activos</span>
+  </div>
+  <div class="kpi-card kpi-cyan">
+    <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-warehouse"></i></span></div>
+    <span class="kpi-value">—</span>
+    <span class="kpi-label">Sucursales</span>
+  </div>
+  <div class="kpi-card kpi-purple">
+    <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></span></div>
+    <span class="kpi-value">—</span>
+    <span class="kpi-label">Alertas de stock bajo</span>
+  </div>
+  <div class="kpi-card kpi-pink">
+    <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-users"></i></span></div>
+    <span class="kpi-value">—</span>
+    <span class="kpi-label">Usuarios</span>
+  </div>
+</div>
+
+<div class="dashboard-grid">
+  <section class="card-surface chart-card" aria-label="Movimientos recientes">
+    <div class="card-head">
+      <h2 class="form-section-title">Movimientos recientes</h2>
+    </div>
+    <div class="empty-state">Sin datos todavía.</div>
+  </section>
+
+  <section class="card-surface chart-card" aria-label="Alertas de stock bajo">
+    <div class="card-head">
+      <h2 class="form-section-title">Alertas de stock bajo</h2>
+    </div>
+    <div class="empty-state">
+      <p>No hay datos todavía.</p>
+    </div>
+  </section>
+</div>
+{% endblock %}

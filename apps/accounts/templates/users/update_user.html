@@ -1,18 +1,19 @@
 {% extends "layout.html" %}
 {% load static %}
 
-{% block title %}
-    {{ employee.username }}
-{% endblock %}
+{% block title %}{{ employee.username }}{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/forms.css' %}">{% endblock %}
 
 {% block content %}
-    <div class="d-flex align-items-center gap-2 mb-4">
-        <a href="{% url 'account:list' %}" class="btn btn-outline-secondary btn-sm">
-            <i class="fa-solid fa-arrow-left"></i>
-        </a>
-        <div>
-            <h2 class="fw-semibold mb-0">{{ employee.first_name }} {{ employee.last_name }}</h2>
-            <p class="text-muted mb-0">Actualiza los datos y reasigna sus permisos.</p>
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'account:list' %}" class="btn btn-outline-brand btn-sm">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="mb-0">{{ employee.first_name }} {{ employee.last_name }}</h1>
+                <p>Actualiza los datos y reasigna sus permisos.</p>
+            </div>
         </div>
     </div>
 
@@ -53,110 +54,106 @@
             </script>
         {% endif %}
 
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-body">
-                <h6 class="text-uppercase text-muted small fw-semibold mb-3">Datos personales</h6>
+        <div class="card-surface form-card mb-3">
+            <h6 class="form-section-title">Datos personales</h6>
 
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="company" class="form-label">Empresa</label>
-                        <select name="company" id="company" class="form-select">
-                            <option value="" disabled {% if not employee.branch %}selected{% endif %}>Selecciona la empresa</option>
-                            {% for c in company %}
-                                <option value="{{ c.id }}" {% if current_company_id == c.id %}selected{% endif %}>{{ c.name }}</option>
-                            {% endfor %}
-                        </select>
+            <div class="form-two-col">
+                <div>
+                    <label for="company" class="form-label">Empresa</label>
+                    <select name="company" id="company" class="form-select">
+                        <option value="" disabled {% if not employee.branch %}selected{% endif %}>Selecciona la empresa</option>
+                        {% for c in company %}
+                            <option value="{{ c.id }}" {% if current_company_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label for="branch" class="form-label">Sucursal</label>
+                    <select name="branch" id="branch" class="form-select" data-current="{{ employee.branch.id|default:'' }}">
+                        <option value="" disabled selected>Primero selecciona una empresa</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="first_name" class="form-label">Nombres</label>
+                    <input type="text" id="first_name" name="first_name" class="form-control" placeholder="Nombre del usuario" value="{{ employee.first_name }}">
+                </div>
+
+                <div>
+                    <label for="last_name" class="form-label">Apellidos</label>
+                    <input type="text" id="last_name" name="last_name" class="form-control" placeholder="Apellidos del usuario" value="{{ employee.last_name }}">
+                </div>
+
+                <div>
+                    <label for="username" class="form-label">Nombre de usuario</label>
+                    <input type="text" id="username" name="username" class="form-control" placeholder="Asigna un nombre de usuario" value="{{ employee.username }}">
+                </div>
+
+                <div>
+                    <label for="email" class="form-label">Correo electrónico</label>
+                    <input type="email" id="email" name="email" class="form-control" placeholder="correo@ejemplo.com" value="{{ employee.email }}">
+                </div>
+
+                <div>
+                    <label for="role" class="form-label">Rol</label>
+                    <select name="role" id="role" class="form-select">
+                        <option value="" disabled {% if not employee.role %}selected{% endif %}>Selecciona el rol del empleado</option>
+                        {% for value, label in roles %}
+                            <option value="{{ value }}" {% if employee.role == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-surface form-card mb-3" id="permissions-card">
+            <h6 class="form-section-title">Asignar permisos</h6>
+
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" name="can_manage_inventory" id="can_manage_inventory" {% if permissions.can_manage_inventory %}checked{% endif %}>
+                        <label class="form-check-label" for="can_manage_inventory">
+                            <i class="fa-solid fa-boxes-stacked me-1"></i> Manejo de inventario
+                        </label>
                     </div>
+                </div>
 
-                    <div class="col-md-6">
-                        <label for="branch" class="form-label">Sucursal</label>
-                        <select name="branch" id="branch" class="form-select" data-current="{{ employee.branch.id|default:'' }}">
-                            <option value="" disabled selected>Primero selecciona una empresa</option>
-                        </select>
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" name="can_manage_sales" id="can_manage_sales" {% if permissions.can_manage_sales %}checked{% endif %}>
+                        <label class="form-check-label" for="can_manage_sales">
+                            <i class="fa-solid fa-cart-shopping me-1"></i> Manejo de ventas
+                        </label>
                     </div>
+                </div>
 
-                    <div class="col-md-6">
-                        <label for="first_name" class="form-label">Nombres</label>
-                        <input type="text" id="first_name" name="first_name" class="form-control" placeholder="Nombre del usuario" value="{{ employee.first_name }}">
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" name="can_manage_employees" id="can_manage_employees" {% if permissions.can_manage_employees %}checked{% endif %}>
+                        <label class="form-check-label" for="can_manage_employees">
+                            <i class="fa-solid fa-id-badge me-1"></i> Manejo de empleados
+                        </label>
                     </div>
+                </div>
 
-                    <div class="col-md-6">
-                        <label for="last_name" class="form-label">Apellidos</label>
-                        <input type="text" id="last_name" name="last_name" class="form-control" placeholder="Apellidos del usuario" value="{{ employee.last_name }}">
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="username" class="form-label">Nombre de usuario</label>
-                        <input type="text" id="username" name="username" class="form-control" placeholder="Asigna un nombre de usuario" value="{{ employee.username }}">
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="email" class="form-label">Correo electrónico</label>
-                        <input type="email" id="email" name="email" class="form-control" placeholder="correo@ejemplo.com" value="{{ employee.email }}">
-                    </div>
-
-                    <div class="col-md-6">
-                        <label for="role" class="form-label">Rol</label>
-                        <select name="role" id="role" class="form-select">
-                            <option value="" disabled {% if not employee.role %}selected{% endif %}>Selecciona el rol del empleado</option>
-                            {% for value, label in roles %}
-                                <option value="{{ value }}" {% if employee.role == value %}selected{% endif %}>{{ label }}</option>
-                            {% endfor %}
-                        </select>
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" name="can_view_reports" id="can_view_reports" {% if permissions.can_view_reports %}checked{% endif %}>
+                        <label class="form-check-label" for="can_view_reports">
+                            <i class="fa-solid fa-chart-line me-1"></i> Manejo de reportes
+                        </label>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="card border-0 shadow-sm mb-3" id="permissions-card">
-            <div class="card-body">
-                <h6 class="text-uppercase text-muted small fw-semibold mb-3">Asignar permisos</h6>
-
-                <div class="row g-2">
-                    <div class="col-md-6">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" role="switch" name="can_manage_inventory" id="can_manage_inventory" {% if permissions.can_manage_inventory %}checked{% endif %}>
-                            <label class="form-check-label" for="can_manage_inventory">
-                                <i class="fa-solid fa-boxes-stacked me-1"></i> Manejo de inventario
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" role="switch" name="can_manage_sales" id="can_manage_sales" {% if permissions.can_manage_sales %}checked{% endif %}>
-                            <label class="form-check-label" for="can_manage_sales">
-                                <i class="fa-solid fa-cart-shopping me-1"></i> Manejo de ventas
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" role="switch" name="can_manage_employees" id="can_manage_employees" {% if permissions.can_manage_employees %}checked{% endif %}>
-                            <label class="form-check-label" for="can_manage_employees">
-                                <i class="fa-solid fa-id-badge me-1"></i> Manejo de empleados
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" role="switch" name="can_view_reports" id="can_view_reports" {% if permissions.can_view_reports %}checked{% endif %}>
-                            <label class="form-check-label" for="can_view_reports">
-                                <i class="fa-solid fa-chart-line me-1"></i> Manejo de reportes
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-erp-primary text-white">
+        <div class="form-actions">
+            <a href="{% url 'account:list' %}" class="btn btn-outline-brand">Cancelar</a>
+            <button type="submit" class="btn btn-brand">
                 <i class="fa-solid fa-floppy-disk"></i> Actualizar usuario
             </button>
-            <a href="{% url 'account:list' %}" class="btn btn-outline-secondary">Cancelar</a>
         </div>
     </form>
 

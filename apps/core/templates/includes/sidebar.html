@@ -1,113 +1,74 @@
 {% load static %}
-<nav class="sidebar d-flex flex-column p-3">
+<nav class="sidebar" aria-label="Navegación principal">
 
-    <a href="{% url 'dashboard' %}" class="d-flex align-items-center mb-3 text-white text-decoration-none">
-        <img src="{% static 'img/logo-icon.png' %}" alt="Logo" class="me-2" style="height: 28px; width: auto;">
-        <span class="fs-5 fw-semibold">{{ request.user.company.name|default:"Mi Negocio" }}</span>
+    <a href="{% url 'dashboard' %}" class="sidebar-brand text-decoration-none">
+        <span class="brand-mark"><img src="{% static 'img/logo-icon.png' %}" alt="Logo"></span>
+        <span class="brand-name">{{ request.user.company.name|default:"StockFlow" }}</span>
     </a>
-    <hr class="text-white-50 mt-0">
 
-    <ul class="nav nav-pills flex-column gap-1">
+    <div class="sidebar-nav">
 
-        <li class="nav-item">
-            <a href="{% url 'dashboard' %}"
-               class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                <i class="fa-solid fa-gauge-high me-2"></i> Inicio
+        <a href="{% url 'dashboard' %}"
+           class="nav-link-item{% if request.resolver_match.url_name == 'dashboard' %} active{% endif %}"
+           {% if request.resolver_match.url_name == 'dashboard' %}aria-current="page"{% endif %}>
+            <span class="nav-icon"><i class="fa-solid fa-gauge-high"></i></span>
+            <span class="nav-label">Inicio</span>
+        </a>
+
+        {% if request.user.is_superuser %}
+            <a href="{% url 'company:list' %}"
+               class="nav-link-item{% if request.resolver_match.namespace == 'company' %} active{% endif %}"
+               {% if request.resolver_match.namespace == 'company' %}aria-current="page"{% endif %}>
+                <span class="nav-icon"><i class="fa-solid fa-suitcase"></i></span>
+                <span class="nav-label">Gestionar empresas</span>
             </a>
-        </li>
-
-        {% if request.user.is_superuser %}
-            <li class="nav-item">
-                <a href="{% url 'company:list' %}" class="nav-link {% if request.resolver_match.namespace == 'company' %}active{% endif %}">
-                    <i class="fa-solid fa-suitcase"></i> Gestionar empresas
-                </a>
-            </li>
         {% endif %}
 
         {% if request.user.is_superuser %}
-            <li class="nav-item">
-                <a href="{% url 'account:list' %}" class="nav-link {% if request.resolver_match.namespace == 'account' %}active{% endif %}">
-                    <i class="fa-solid fa-users me-2"></i> Gestionar usuarios
-                </a>
-            </li>
+            <a href="{% url 'account:list' %}"
+               class="nav-link-item{% if request.resolver_match.namespace == 'account' %} active{% endif %}"
+               {% if request.resolver_match.namespace == 'account' %}aria-current="page"{% endif %}>
+                <span class="nav-icon"><i class="fa-solid fa-users"></i></span>
+                <span class="nav-label">Gestionar usuarios</span>
+            </a>
         {% endif %}
-        
-        <li><hr class="text-white-50 my-2"></li>
-        
-        <li class="nav-item px-3 pb-1">
-            <span class="text-uppercase text-white-50 small fw-semibold">Operación</span>
-        </li>        
+
+        <hr class="sidebar-divider">
+        <div class="sidebar-section-label">Operación</div>
 
         {% if request.user.role == request.user.Role.ADMIN or request.user.permissions.can_manage_inventory %}
-            <li class="nav-item">
-                <a href="#inventory-submenu" data-bs-toggle="collapse" role="button"
-                   aria-expanded="{% if request.resolver_match.namespace == 'inventory' %}true{% else %}false{% endif %}"
-                   class="nav-link d-flex align-items-center {% if request.resolver_match.namespace == 'inventory' %}active{% endif %}">
-                    <i class="fa-solid fa-boxes-stacked me-2"></i> Inventario
-                    <i class="fa-solid fa-chevron-down ms-auto small"></i>
-                </a>
-                <ul class="nav nav-pills flex-column gap-1 ms-3 mt-1 collapse {% if request.resolver_match.namespace == 'inventory' %}show{% endif %}" id="inventory-submenu">
-                    <li class="nav-item">
-                        <a href="{% url 'inventory:product_list' %}" class="nav-link {% if 'product' in request.resolver_match.url_name %}active{% endif %}">
-                            <i class="fa-solid fa-tags me-2"></i> Productos
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{% url 'inventory:inventory_list' %}" class="nav-link {% if 'inventory' in request.resolver_match.url_name %}active{% endif %}">
-                            <i class="fa-solid fa-warehouse me-2"></i> Inventario
-                        </a>
-                    </li>
-                </ul>
-            </li>
-        {% endif %}
-
-        {% comment %}
-            {% if request.user.role == request.user.Role.ADMIN or request.user.permissions.can_manage_sales %}
-                <li class="nav-item">
-                    <a href="{% url 'sales_list' %}"
-                    class="nav-link {% if request.resolver_match.url_name == 'sales_list' %}active{% endif %}">
-                        <i class="fa-solid fa-cart-shopping me-2"></i> Ventas
-                    </a>
-                </li>
-            {% endif %}
-        
-
-        {% if request.user.role == request.user.Role.ADMIN or request.user.permissions.can_manage_employees %}
-            <li class="nav-item">
-                <a href="{% url 'employees_list' %}"
-                class="nav-link {% if request.resolver_match.url_name == 'employees_list' %}active{% endif %}">
-                    <i class="fa-solid fa-id-badge me-2"></i> Empleados
-                </a>
-            </li>
-        {% endif %}
-
-        {% if request.user.role == request.user.Role.ADMIN or request.user.permissions.can_view_reports %}
-            <li class="nav-item">
-                <a href="{% url 'reports' %}"
-                class="nav-link {% if request.resolver_match.url_name == 'reports' %}active{% endif %}">
-                    <i class="fa-solid fa-chart-line me-2"></i> Reportes
-                </a>
-            </li>
-        {% endif %}
-
-        <li><hr class="text-white-50 my-2"></li>
-
-        <li class="nav-item">
-            <a href="{% url 'company:info' %}"
-               class="nav-link {% if request.resolver_match.namespace == 'company:info' %}active{% endif %}">
-                <i class="fa-solid fa-building me-2"></i> Info. compañía
+            <a href="#inventory-submenu" data-bs-toggle="collapse" data-sidebar-toggle role="button"
+               aria-expanded="{% if request.resolver_match.namespace == 'inventory' %}true{% else %}false{% endif %}"
+               aria-controls="inventory-submenu"
+               class="nav-link-item{% if request.resolver_match.namespace == 'inventory' %} active{% endif %}">
+                <span class="nav-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
+                <span class="nav-label">Inventario</span>
+                <span class="nav-chevron"><i class="fa-solid fa-chevron-down"></i></span>
             </a>
-        </li>
-        {% endcomment %}
+            <div class="collapse nav-submenu{% if request.resolver_match.namespace == 'inventory' %} show{% endif %}" id="inventory-submenu">
+                <a href="{% url 'inventory:product_list' %}"
+                   class="nav-link-item{% if 'product' in request.resolver_match.url_name %} active{% endif %}">
+                    <span class="nav-icon"><i class="fa-solid fa-tags"></i></span>
+                    <span class="nav-label">Productos</span>
+                </a>
+                <a href="{% url 'inventory:inventory_list' %}"
+                   class="nav-link-item{% if 'inventory' in request.resolver_match.url_name %} active{% endif %}">
+                    <span class="nav-icon"><i class="fa-solid fa-warehouse"></i></span>
+                    <span class="nav-label">Inventario</span>
+                </a>
+            </div>
+        {% endif %}
 
-    </ul>
+    </div>
 
-    <div class="mt-auto pt-3 border-top border-secondary-subtle">
+    <div class="sidebar-footer">
         <form id="logout-form" method="post" action="{% url 'account:logout' %}" class="m-0">
             {% csrf_token %}
-            <button type="submit" class="nav-link nav-link-logout btn btn-link text-decoration-none text-white-50 w-100 text-start d-flex align-items-center border-0 px-3 py-2 rounded">
-                <i class="fa-solid fa-right-from-bracket me-2"></i> Cerrar sesión
+            <button type="submit" class="nav-link-item bg-transparent border-0 w-100 text-start">
+                <span class="nav-icon"><i class="fa-solid fa-right-from-bracket"></i></span>
+                <span class="nav-label">Cerrar sesión</span>
             </button>
         </form>
     </div>
+
 </nav>

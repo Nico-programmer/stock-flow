@@ -1,0 +1,81 @@
+/* ============================================================
+   variables.css
+   Variables globales de color, tipografía, radios y sombras.
+   Cambiar la paleta de la app se hace editando solo este archivo.
+   ============================================================ */
+:root {
+  /* Tipografía */
+  --font-heading: 'Space Grotesk', sans-serif;
+  --font-body: 'Public Sans', sans-serif;
+
+  /* Sidebar (identidad de marca — no modificar para conservarlo igual) */
+  --navy-900: #0a1730;
+  --navy-800: #0f2247;
+  --navy-700: #17356a;
+  --accent: oklch(0.58 0.19 258);
+  --accent-dark: oklch(0.48 0.19 258);
+  --accent-soft: oklch(0.58 0.19 258 / 0.18);
+
+  /* Fondo oscuro del contenido */
+  --bg-0: #0a0d17;
+  --bg-1: #10142a;
+
+  /* Acentos del sistema (misma familia en botones, gráficos, badges e iconos) */
+  --c-blue: oklch(0.66 0.19 258);
+  --c-cyan: oklch(0.80 0.13 210);
+  --c-purple: oklch(0.66 0.21 295);
+  --c-pink: oklch(0.72 0.20 355);
+  --c-orange: oklch(0.78 0.15 55);
+
+  /* Gradientes */
+  --grad-primary: linear-gradient(135deg, oklch(0.56 0.22 295), oklch(0.58 0.19 258));
+  --grad-purple-pink: linear-gradient(135deg, oklch(0.52 0.22 295), oklch(0.60 0.22 355));
+  --grad-cyan-blue: linear-gradient(135deg, oklch(0.62 0.13 215), oklch(0.50 0.19 258));
+  --grad-blue-indigo: linear-gradient(135deg, oklch(0.58 0.19 258), oklch(0.44 0.20 280));
+  --grad-pink-orange: linear-gradient(135deg, oklch(0.58 0.21 355), oklch(0.66 0.17 45));
+  --glow-primary: 0 8px 24px -6px oklch(0.58 0.22 280 / 0.6);
+
+  /* Formas decorativas difuminadas del fondo */
+  --blob-1: oklch(0.55 0.24 295);
+  --blob-2: oklch(0.55 0.20 258);
+  --blob-3: oklch(0.72 0.13 210);
+
+  /* Vidrio (glassmorphism) */
+  --glass: rgba(255, 255, 255, 0.045);
+  --glass-strong: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.10);
+  --glass-blur: blur(18px);
+
+  /* Texto sobre fondo oscuro */
+  --ink: #eef1fa;
+  --ink-soft: #a9b0c8;
+  --ink-faint: #8088a6;
+  --link: oklch(0.80 0.12 230);
+
+  /* Bordes y superficies */
+  --border: rgba(255, 255, 255, 0.12);
+  --border-soft: rgba(255, 255, 255, 0.07);
+  --surface: var(--glass);
+  --surface-muted: rgba(255, 255, 255, 0.035);
+
+  /* Estados semánticos */
+  --success: oklch(0.82 0.14 165);
+  --success-bg: oklch(0.82 0.14 165 / 0.14);
+  --warning: oklch(0.84 0.13 80);
+  --warning-bg: oklch(0.84 0.13 80 / 0.14);
+  --danger: oklch(0.74 0.18 10);
+  --danger-bg: oklch(0.74 0.18 10 / 0.16);
+
+  /* Radios y sombras */
+  --radius-sm: 8px;
+  --radius: 14px;
+  --radius-lg: 20px;
+  --shadow-sm: 0 1px 2px rgba(10, 23, 48, 0.06);
+  --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.45);
+
+  /* Layout */
+  --sidebar-width: 264px;
+  --topbar-height: 64px;
+  --content-max: 1320px;
+}

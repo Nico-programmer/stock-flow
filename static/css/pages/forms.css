@@ -1,0 +1,36 @@
+/* ============================================================
+   pages/forms.css
+   Layout de dos columnas para formularios (producto, usuario,
+   empresa, etc.), colapsa a una columna en pantallas pequeñas.
+   ============================================================ */
+.form-two-col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px 28px;
+}
+
+@media (min-width: 768px) {
+  .form-two-col { grid-template-columns: 1fr 1fr; }
+  .form-two-col .span-2 { grid-column: 1 / -1; }
+}
+
+.form-card {
+  padding: 24px;
+}
+
+@media (min-width: 768px) {
+  .form-card { padding: 32px; }
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 28px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 575.98px) {
+  .form-actions { flex-direction: column-reverse; }
+  .form-actions .btn { width: 100%; }
+}

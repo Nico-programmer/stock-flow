@@ -1,0 +1,37 @@
+{% extends "layout.html" %}
+{% load static %}
+{% block title %}Movimientos{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/products.css' %}">{% endblock %}
+
+{% block content %}
+{# Plantilla nueva, aun no conectada a inventory/urls.py ni views.py. #}
+<div class="page-header">
+    <div>
+        <span class="section-label">Inventario</span>
+        <h1>Movimientos</h1>
+        <p>{{ movements.paginator.count|default:0 }} movimientos registrados.</p>
+    </div>
+</div>
+
+<div class="card-surface p-3 p-md-4">
+    <div class="table-responsive">
+        <table class="table-app table-stack-mobile">
+            <thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Sucursal</th></tr></thead>
+            <tbody>
+                {% for mov in movements %}
+                    <tr>
+                        <td data-label="Fecha">{{ mov.date|date:"d/m/Y H:i" }}</td>
+                        <td data-label="Producto">{{ mov.product }}</td>
+                        <td data-label="Tipo"><span class="badge-type {{ mov.type_class }}">{{ mov.type }}</span></td>
+                        <td data-label="Cantidad">{{ mov.quantity }}</td>
+                        <td data-label="Sucursal">{{ mov.branch }}</td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="5"><div class="empty-state">Sin movimientos todavía.</div></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include "includes/pagination.html" with page_obj=movements %}
+</div>
+{% endblock %}

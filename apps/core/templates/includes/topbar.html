@@ -1,7 +1,17 @@
-<header class="bg-white border-bottom d-flex align-items-center justify-content-between p-3 d-lg-none">
-    <button id="sidebarToggle" class="btn btn-outline-secondary">
-        <i class="bi bi-list fs-5"></i>
+<header class="topbar">
+    <button type="button"
+            class="topbar-btn topbar-hamburger"
+            data-bs-toggle="offcanvas"
+            data-bs-target="#sidebarOffcanvas"
+            aria-controls="sidebarOffcanvas"
+            aria-label="Abrir menú">
+        <i class="fa-solid fa-bars"></i>
     </button>
-    <span class="fw-semibold">{% block topbar_title %}{% endblock %}</span>
-    <span style="width:38px"></span>
+
+    <div></div>
+
+    <div class="topbar-user">
+        <span class="avatar">{{ request.user.first_name|default:"U"|slice:":1"|upper }}</span>
+        <span class="d-none d-sm-inline">{{ request.user.get_full_name|default:request.user.username }}</span>
+    </div>
 </header>

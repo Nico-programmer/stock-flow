@@ -1,0 +1,65 @@
+/* ============================================================
+   pages/auth.css
+   Login: tarjeta de vidrio centrada sobre el fondo oscuro con
+   formas decorativas (mismo lenguaje que el resto de la app).
+   ============================================================ */
+.auth-screen {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 410px;
+  background: rgba(16, 20, 42, 0.55);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border-radius: var(--radius-lg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), var(--shadow-lg);
+  padding: 36px 30px;
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.auth-brand .brand-mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--grad-primary);
+  box-shadow: var(--glow-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  overflow: hidden;
+}
+
+.auth-brand .brand-mark img { width: 100%; height: 100%; object-fit: cover; }
+
+.auth-brand .brand-name {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--ink);
+}
+
+.auth-card h1 { font-size: 26px; margin: 6px 0 6px; letter-spacing: -0.01em; }
+
+.auth-card p.subtitle {
+  color: var(--ink-soft);
+  margin-bottom: 26px;
+  font-size: 14px;
+}

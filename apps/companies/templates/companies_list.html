@@ -2,74 +2,69 @@
 {% load static %}
 
 {% block title %}Gestión de compañias{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/products.css' %}">{% endblock %}
 
 {% block content %}
-    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+    <div class="page-header">
         <div>
-            <h2 class="fw-semibold mb-1">Gestión de Empresas</h2>
-            <p class="text-muted mb-0">Administra las empresas que pertenecen a stock-flow.</p>
+            <span class="section-label">Administración</span>
+            <h1>Gestión de Empresas</h1>
+            <p>Administra las empresas que pertenecen a stock-flow.</p>
         </div>
-
-        <a href="{% url "company:create" %}" class="btn btn-erp-primary text-white"><i class="fa-solid fa-plus"></i> Crear empresa</a>
+        <a href="{% url "company:create" %}" class="btn btn-brand"><i class="fa-solid fa-plus"></i> Crear empresa</a>
     </div>
 
-    <div class="card border-0 shadow-sm">
+    <div class="card-surface p-3 p-md-4">
         <div class="table-responsive">
-            <table class="table table-hover table-sm align-middle mb-0 js-datatable">
-                <thead class="table-light">
+            <table class="table-app table-stack-mobile">
+                <thead>
                     <tr>
                         <th>Empresa</th>
-                        <th class="text-center">Sucursales</th>
+                        <th>Sucursales</th>
                         <th>Teléfono</th>
-                        <th class="text-center nosort" data-filter>Estado</th>
-                        <th class="text-end nosort">Acciones</th>
+                        <th>Estado</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for c in companies %}
                         <tr>
-                            <td>
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="d-flex align-items-center justify-content-center rounded-circle text-white flex-shrink-0"
-                                        style="width: 30px; height: 30px; font-size: .8rem; background-color: var(--erp-navy);">
-                                        <i class="fa-solid fa-shop"></i>
-                                    </div>
-                                    <div class="lh-sm">
-                                        <div class="fw-semibold">{{ c.name }}</div>
-                                        <div class="small text-muted">{{ c.branches.first.address|default:"Sin sucursales" }}</div>
-                                    </div>
-                                </div>
+                            <td data-label="Empresa">
+                                <div class="fw-semibold">{{ c.name }}</div>
+                                <div class="small text-muted-soft">{{ c.branches.first.address|default:"Sin sucursales" }}</div>
                             </td>
-                            <td class="text-center">{{ c.branch_count }}</td>
-                            <td>{{ c.phone_number|default:"—" }}</td>
-                            <td class="text-center" data-search="{% if c.is_active %}Activa{% else %}Inactiva{% endif %}">
+                            <td data-label="Sucursales">{{ c.branch_count }}</td>
+                            <td data-label="Teléfono">{{ c.phone_number|default:"—" }}</td>
+                            <td data-label="Estado">
                                 {% if c.is_active %}
-                                    <i class="fa-solid fa-circle-check text-success" title="Activa"></i>
+                                    <span class="badge-stock ok">Activa</span>
                                 {% else %}
-                                    <i class="fa-solid fa-circle-xmark text-secondary" title="Inactiva"></i>
+                                    <span class="badge-stock out">Inactiva</span>
                                 {% endif %}
                             </td>
-                            <td class="text-end text-nowrap">
-                                <a href="{% url "company:update" c.id %}" class="btn btn-sm btn-outline-secondary" title="Actualizar">
+                            <td data-label="Acciones" class="text-end text-nowrap">
+                                <a href="{% url "company:update" c.id %}" class="btn btn-outline-brand btn-sm" title="Actualizar">
                                     <i class="fa-solid fa-pen"></i>
                                 </a>
                                 {% if c.is_active %}
                                     <form method="POST" action="#" onsubmit="return confirm('¿Seguro que deseas desactivar esta empresa?');" style="display:inline;">
                                         {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Desactivar">
+                                        <button type="submit" class="btn btn-outline-brand btn-sm" title="Desactivar">
                                             <i class="fa-solid fa-trash"></i>
                                         </button>
                                     </form>
                                 {% else %}
                                     <form method="POST" action="#" onsubmit="return confirm('¿Deseas reactivar esta empresa?');" style="display:inline;">
                                         {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-outline-success" title="Reactivar">
+                                        <button type="submit" class="btn btn-outline-brand btn-sm" title="Reactivar">
                                             <i class="fa-solid fa-rotate-left"></i>
                                         </button>
                                     </form>
                                 {% endif %}
                             </td>
                         </tr>
+                    {% empty %}
+                        <tr><td colspan="5"><div class="empty-state">Aún no hay empresas registradas.</div></td></tr>
                     {% endfor %}
                 </tbody>
             </table>

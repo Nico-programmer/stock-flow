@@ -1,6 +1,10 @@
 # Database
 db.sqlite3
 
+# Other's
+design/
+docs/
+
 # Virtual environment
 venv/
 env/
