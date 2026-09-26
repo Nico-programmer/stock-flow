@@ -11,9 +11,6 @@
     <h1>Hola, {{ request.user.first_name|default:"usuario" }}</h1>
     <p>Resumen del inventario.</p>
   </div>
-  <a href="{% url 'inventory:create_product' %}" class="btn btn-brand">
-    <i class="fa-solid fa-plus"></i> Nuevo producto
-  </a>
 </div>
 
 <div class="kpi-grid">

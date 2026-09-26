@@ -1,8 +1,6 @@
 from django.contrib import admin
 
-# Import the model
-from .models import CustomUser, EmployeePermission
+from .models import User, Group
 
-# Register your models here.
-admin.site.register(CustomUser)
-admin.site.register(EmployeePermission)
+admin.site.register(User)
+admin.site.register(Group)

@@ -33,31 +33,7 @@
             </a>
         {% endif %}
 
-        <hr class="sidebar-divider">
-        <div class="sidebar-section-label">Operación</div>
-
-        {% if request.user.role == request.user.Role.ADMIN or request.user.permissions.can_manage_inventory %}
-            <a href="#inventory-submenu" data-bs-toggle="collapse" data-sidebar-toggle role="button"
-               aria-expanded="{% if request.resolver_match.namespace == 'inventory' %}true{% else %}false{% endif %}"
-               aria-controls="inventory-submenu"
-               class="nav-link-item{% if request.resolver_match.namespace == 'inventory' %} active{% endif %}">
-                <span class="nav-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
-                <span class="nav-label">Inventario</span>
-                <span class="nav-chevron"><i class="fa-solid fa-chevron-down"></i></span>
-            </a>
-            <div class="collapse nav-submenu{% if request.resolver_match.namespace == 'inventory' %} show{% endif %}" id="inventory-submenu">
-                <a href="{% url 'inventory:product_list' %}"
-                   class="nav-link-item{% if 'product' in request.resolver_match.url_name %} active{% endif %}">
-                    <span class="nav-icon"><i class="fa-solid fa-tags"></i></span>
-                    <span class="nav-label">Productos</span>
-                </a>
-                <a href="{% url 'inventory:inventory_list' %}"
-                   class="nav-link-item{% if 'inventory' in request.resolver_match.url_name %} active{% endif %}">
-                    <span class="nav-icon"><i class="fa-solid fa-warehouse"></i></span>
-                    <span class="nav-label">Inventario</span>
-                </a>
-            </div>
-        {% endif %}
+        {# Operación (inventario/ventas/compras) se agrega cuando existan las apps del nuevo diseño. #}
 
     </div>
 
