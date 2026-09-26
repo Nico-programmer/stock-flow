@@ -8,6 +8,8 @@ app_name = 'company'
 
 urlpatterns = [
     path('', companies_list, name="list"),
+    path('info/', company_info, name="info"),
+    path('info/<int:company_id>/', company_info, name="info"),
     path('create-companies/', create_companies, name="create"),
     path('update-companies/<int:companies_id>/', update_companies, name="update"),
 

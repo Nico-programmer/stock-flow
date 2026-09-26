@@ -14,6 +14,9 @@
     <!-- Icons -->
     <script src="https://kit.fontawesome.com/5bb6ce43f9.js" crossorigin="anonymous"></script>
 
+    <!-- DataTables (Bootstrap 5) -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.1.8/css/dataTables.bootstrap5.min.css">
+
     <!-- CSS propio, dividido por responsabilidad -->
     <link rel="stylesheet" href="{% static 'css/variables.css' %}">
     <link rel="stylesheet" href="{% static 'css/layout.css' %}">
@@ -48,7 +51,7 @@
             {% include "includes/topbar.html" %}
 
             <main class="app-content">
-                {% include "includes/messages.html" %}
+                {% block messages %}{% include "includes/messages.html" %}{% endblock %}
                 {% block content %}{% endblock %}
             </main>
         </div>
@@ -58,8 +61,14 @@
     <!-- Boostrap -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
+    <!-- DataTables (Bootstrap 5) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/2.1.8/js/dataTables.bootstrap5.min.js"></script>
+
     <script src="{% static 'js/sidebar.js' %}"></script>
     <script src="{% static 'js/main.js' %}"></script>
+    <script src="{% static 'js/datatables-init.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

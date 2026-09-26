@@ -138,5 +138,5 @@ MAILERS = {
 }
 
 # Login config
-LOGIN_URL = 'login'
+LOGIN_URL = 'account:login'
 LOGIN_REDIRECT_URL = 'dashboard'

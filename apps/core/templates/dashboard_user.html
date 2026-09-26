@@ -1,0 +1,121 @@
+{% extends "layout.html" %}
+{% load static %}
+{% block title %}Inicio{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/dashboard.css' %}">{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <span class="section-label">Panel general</span>
+    <h1>Hola, {{ request.user.full_name|default:request.user.username }}</h1>
+    <p>Resumen de {{ company.name|default:"tu empresa" }}.</p>
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi-card kpi-blue">
+    <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-warehouse"></i></span></div>
+    <span class="kpi-value">{{ active_branches }}</span>
+    <span class="kpi-label">Sucursales activas</span>
+  </div>
+  <div class="kpi-card kpi-cyan">
+    <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-users"></i></span></div>
+    <span class="kpi-value">{{ active_users }}</span>
+    <span class="kpi-label">Usuarios activos</span>
+  </div>
+  <div class="kpi-card kpi-purple">
+    <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-layer-group"></i></span></div>
+    <span class="kpi-value">{{ total_groups }}</span>
+    <span class="kpi-label">Grupos</span>
+  </div>
+  <div class="kpi-card kpi-pink">
+    <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-user-shield"></i></span></div>
+    <span class="kpi-value">{{ request.user.group.name|default:"Sin grupo" }}</span>
+    <span class="kpi-label">Tu grupo</span>
+  </div>
+</div>
+
+<div class="dashboard-grid">
+  <section class="card-surface chart-card" aria-label="Usuarios por grupo">
+    <div class="card-head">
+      <h2 class="form-section-title">Usuarios por grupo</h2>
+      <span class="meta">{{ donut_total }} en total</span>
+    </div>
+    {% if donut_segments %}
+      <div class="donut-wrap">
+        <div class="donut">
+          <svg viewBox="0 0 42 42" aria-hidden="true">
+            <circle class="track" cx="21" cy="21" r="15.915"></circle>
+            {% for s in donut_segments %}
+              <circle class="seg seg-{{ s.color }}" cx="21" cy="21" r="15.915" stroke-dasharray="{{ s.dash }}" stroke-dashoffset="{{ s.offset }}"></circle>
+            {% endfor %}
+          </svg>
+          <div class="donut-center"><strong>{{ donut_total }}</strong><span>usuarios</span></div>
+        </div>
+        <ul class="legend">
+          {% for s in donut_segments %}
+            <li><span class="dot dot-{{ s.color }}"></span><span>{{ s.label }}</span><span class="val">{{ s.value }}</span></li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% else %}
+      <div class="empty-state">Todavía no hay compañeros registrados.</div>
+    {% endif %}
+  </section>
+
+  <section class="card-surface chart-card" aria-label="Tus accesos">
+    <div class="card-head">
+      <h2 class="form-section-title">Tus accesos</h2>
+    </div>
+    {% with group=request.user.group %}
+      {% if group %}
+        <ul class="low-stock-list">
+          <li>
+            <span class="name"><i class="fa-solid fa-boxes-stacked me-2"></i>Inventario</span>
+            {% if group.can_access_inventory %}<span class="badge-stock ok">Habilitado</span>{% else %}<span class="badge-stock out">Sin acceso</span>{% endif %}
+          </li>
+          <li>
+            <span class="name"><i class="fa-solid fa-right-from-bracket me-2"></i>Salida</span>
+            {% if group.can_access_sales %}<span class="badge-stock ok">Habilitado</span>{% else %}<span class="badge-stock out">Sin acceso</span>{% endif %}
+          </li>
+          <li>
+            <span class="name"><i class="fa-solid fa-right-to-bracket me-2"></i>Entrada</span>
+            {% if group.can_access_purchases %}<span class="badge-stock ok">Habilitado</span>{% else %}<span class="badge-stock out">Sin acceso</span>{% endif %}
+          </li>
+          <li>
+            <span class="name"><i class="fa-solid fa-users me-2"></i>Usuarios</span>
+            {% if group.can_access_users %}<span class="badge-stock ok">Habilitado</span>{% else %}<span class="badge-stock out">Sin acceso</span>{% endif %}
+          </li>
+        </ul>
+      {% else %}
+        <div class="empty-state">Todavía no tenés un grupo asignado. Hablá con el administrador de tu empresa.</div>
+      {% endif %}
+    {% endwith %}
+  </section>
+</div>
+
+<section class="card-surface chart-card mt-3" aria-label="Tu equipo">
+  <div class="card-head">
+    <h2 class="form-section-title">Tu equipo</h2>
+    <span class="meta">{{ colleagues|length }} compañeros</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table-app">
+      <thead><tr><th>Usuario</th><th>Grupo</th><th>Estado</th></tr></thead>
+      <tbody>
+        {% for c in colleagues %}
+          <tr>
+            <td>{{ c.full_name }}</td>
+            <td class="cell-muted">{{ c.group.name|default:"Sin grupo" }}</td>
+            <td>
+              {% if c.is_active %}<span class="badge-stock ok">Activo</span>{% else %}<span class="badge-stock out">Inactivo</span>{% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3"><div class="empty-state">Sos el único usuario de tu empresa por ahora.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

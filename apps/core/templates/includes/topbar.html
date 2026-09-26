@@ -11,7 +11,7 @@
     <div></div>
 
     <div class="topbar-user">
-        <span class="avatar">{{ request.user.first_name|default:"U"|slice:":1"|upper }}</span>
-        <span class="d-none d-sm-inline">{{ request.user.get_full_name|default:request.user.username }}</span>
+        <span class="avatar">{{ request.user.full_name|default:"U"|slice:":1"|upper }}</span>
+        <span class="d-none d-sm-inline">{{ request.user.full_name|default:request.user.username }}</span>
     </div>
 </header>

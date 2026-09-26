@@ -1,0 +1,69 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}{{ company.name }}{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/products.css' %}">{% endblock %}
+
+{% block content %}
+    <div class="page-header">
+        <div>
+            <span class="section-label">Empresa</span>
+            <h1>{{ company.name }}</h1>
+            <p>Información general y sucursales.</p>
+        </div>
+        {% if request.user.is_platform_admin %}
+            <a href="{% url 'company:update' company.id %}" class="btn btn-outline-brand">
+                <i class="fa-solid fa-pen"></i> Editar
+            </a>
+        {% endif %}
+    </div>
+
+    <div class="card-surface p-3 p-md-4 mb-3">
+        <h6 class="form-section-title">Datos generales</h6>
+        <table class="table-app">
+            <tbody>
+                <tr><td>Teléfono</td><td>{{ company.phone_number|default:"—" }}</td></tr>
+                <tr>
+                    <td>Estado</td>
+                    <td>
+                        {% if company.is_active %}
+                            <span class="badge-stock ok">Activa</span>
+                        {% else %}
+                            <span class="badge-stock out">Inactiva</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr><td>Creada</td><td>{{ company.created_at|date:"d/m/Y" }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card-surface p-3 p-md-4">
+        <div class="card-head">
+            <h6 class="form-section-title mb-0">Sucursales</h6>
+            <span class="meta">{{ branches|length }}</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table-app table-stack-mobile">
+                <thead><tr><th>Nombre</th><th>Dirección</th><th>Estado</th></tr></thead>
+                <tbody>
+                    {% for b in branches %}
+                        <tr>
+                            <td data-label="Nombre">{{ b.name }}</td>
+                            <td data-label="Dirección">{{ b.address|default:"—" }}</td>
+                            <td data-label="Estado">
+                                {% if b.is_active %}
+                                    <span class="badge-stock ok">Activa</span>
+                                {% else %}
+                                    <span class="badge-stock out">Inactiva</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="3"><div class="empty-state">Esta empresa aún no tiene sucursales.</div></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

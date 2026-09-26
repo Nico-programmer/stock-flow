@@ -18,62 +18,45 @@ document.querySelectorAll('.toggle-password').forEach(function (button) {
 
 document.addEventListener('DOMContentLoaded', function () {
     const companySelect = document.getElementById('company')
-    const branchSelect = document.getElementById('branch')
-    const roleSelect = document.getElementById('role')
-    const branchWrapper = branchSelect.closest('.col-md-6')
-    const permissionsCard = document.getElementById('permissions-card')
+    const groupSelect = document.getElementById('group')
 
-    const currentBranchId = branchSelect.dataset.current || ''
+    const currentGroupId = groupSelect.dataset.current || ''
 
-    function loadBranches(companyId, selectedBranchId) {
-        branchSelect.innerHTML = '<option value="" disabled selected>Cargando...</option>'
-        branchSelect.disabled = true
+    function loadGroups(companyId, selectedGroupId) {
+        groupSelect.innerHTML = '<option value="" selected>Cargando...</option>'
+        groupSelect.disabled = true
 
         if (!companyId) return
 
-        const url = branchesUrlTemplate.replace('0', companyId)
+        const url = groupsUrlTemplate.replace('0', companyId)
 
         fetch(url)
             .then(response => response.json())
-            .then(branches => {
-                branchSelect.innerHTML = '<option value="" disabled selected>Selecciona la sucursal</option>'
+            .then(groups => {
+                groupSelect.innerHTML = '<option value="">Sin grupo</option>'
 
-                if (branches.length === 0) {
-                    branchSelect.innerHTML = '<option value="" disabled selected>Sin sucursales activas</option>'
-                    return
-                }
-
-                branches.forEach(branch => {
+                groups.forEach(group => {
                     const option = document.createElement('option')
-                    option.value = branch.id
-                    option.textContent = branch.name
-                    if (String(branch.id) === String(selectedBranchId)) {
+                    option.value = group.id
+                    option.textContent = group.name
+                    if (String(group.id) === String(selectedGroupId)) {
                         option.selected = true
                     }
-                    branchSelect.appendChild(option)
+                    groupSelect.appendChild(option)
                 })
 
-                branchSelect.disabled = false
+                groupSelect.disabled = false
             })
             .catch(() => {
-                branchSelect.innerHTML = '<option value="" disabled selected>Error al cargar sucursales</option>'
+                groupSelect.innerHTML = '<option value="">Error al cargar grupos</option>'
             })
-    }
-
-    function toggleFieldsByRole() {
-        const isAdmin = roleSelect.value === 'admin'
-        branchWrapper.style.display = isAdmin ? 'none' : ''
-        if (permissionsCard) permissionsCard.style.display = isAdmin ? 'none' : ''
     }
 
     if (companySelect.value) {
-        loadBranches(companySelect.value, currentBranchId)
+        loadGroups(companySelect.value, currentGroupId)
     }
 
     companySelect.addEventListener('change', function () {
-        loadBranches(this.value, '')
+        loadGroups(this.value, '')
     })
-
-    roleSelect.addEventListener('change', toggleFieldsByRole)
-    toggleFieldsByRole()
 })

@@ -9,70 +9,34 @@
     <div>
         <span class="section-label">Administración</span>
         <h1>Gestión de usuarios</h1>
-        <p>Administra a los usuarios que pertenecen a tu empresa.</p>
+        <p>Usuarios de todas las empresas.</p>
     </div>
     <a href="{% url "account:create" %}" class="btn btn-brand"><i class="fa-solid fa-plus"></i> Crear usuario</a>
 </div>
 
 <div class="card-surface p-3 p-md-4">
     <div class="table-responsive">
-        <table class="table-app table-stack-mobile">
+        <table class="table-app js-datatable">
             <thead>
                 <tr>
                     <th>Usuario</th>
-                    <th>Rol</th>
                     <th>Empresa</th>
-                    <th>Sucursal</th>
-                    <th>Permisos</th>
+                    <th>Grupo</th>
+                    <th>Teléfono</th>
                     <th>Estado</th>
-                    <th></th>
+                    <th class="nosort"></th>
                 </tr>
             </thead>
             <tbody>
                 {% for user in users %}
                     <tr>
                         <td data-label="Usuario">
-                            <div class="fw-semibold">
-                                {{ user.first_name|default:"" }} {{ user.last_name|default:"" }}
-                                {% if not user.first_name and not user.last_name %}<span class="text-muted-soft">{{ user.username }}</span>{% endif %}
-                            </div>
-                            <div class="small text-muted-soft">{{ user.username }} · {{ user.email }}</div>
+                            <div class="fw-semibold">{{ user.full_name }}</div>
+                            <div class="small text-muted-soft">{{ user.username }}</div>
                         </td>
-
-                        <td data-label="Rol">
-                            {% if user.role == user.Role.ADMIN %}
-                                <i class="fa-solid fa-user-shield" title="{{ user.get_role_display }}"></i>
-                            {% elif user.role == user.Role.MANAGER %}
-                                <i class="fa-solid fa-user-pen" title="{{ user.get_role_display }}"></i>
-                            {% else %}
-                                <i class="fa-solid fa-user" title="{{ user.get_role_display }}"></i>
-                            {% endif %}
-                            {{ user.get_role_display }}
-                        </td>
-
-                        <td data-label="Empresa">{% if user.company %}{{ user.company.name }}{% elif user.branch %}{{ user.branch.company.name }}{% else %}—{% endif %}</td>
-                        <td data-label="Sucursal">{% if user.branch %}{{ user.branch.name }}{% else %}—{% endif %}</td>
-
-                        <td data-label="Permisos">
-                            {% if user.role == user.Role.ADMIN %}
-                                <span class="text-muted-soft small">Acceso total</span>
-                            {% elif user.permissions %}
-                                {% with perms=user.permissions %}
-                                    <span class="d-inline-flex gap-2">
-                                        {% if perms.can_manage_inventory %}<i class="fa-solid fa-boxes-stacked" title="Inventario"></i>{% endif %}
-                                        {% if perms.can_manage_sales %}<i class="fa-solid fa-cart-shopping" title="Ventas"></i>{% endif %}
-                                        {% if perms.can_manage_employees %}<i class="fa-solid fa-id-badge" title="Empleados"></i>{% endif %}
-                                        {% if perms.can_view_reports %}<i class="fa-solid fa-chart-line" title="Reportes"></i>{% endif %}
-                                        {% if not perms.can_manage_inventory and not perms.can_manage_sales and not perms.can_manage_employees and not perms.can_view_reports %}
-                                            <span class="badge-stock out">Sin permisos</span>
-                                        {% endif %}
-                                    </span>
-                                {% endwith %}
-                            {% else %}
-                                <span class="badge-stock out">Sin permisos</span>
-                            {% endif %}
-                        </td>
-
+                        <td data-label="Empresa">{{ user.company.name|default:"—" }}</td>
+                        <td data-label="Grupo">{{ user.group.name|default:"Sin grupo" }}</td>
+                        <td data-label="Teléfono">{{ user.phone_number|default:"—" }}</td>
                         <td data-label="Estado">
                             {% if user.is_active %}
                                 <span class="badge-stock ok">Activo</span>
@@ -80,7 +44,6 @@
                                 <span class="badge-stock out">Inactivo</span>
                             {% endif %}
                         </td>
-
                         <td data-label="Acciones" class="text-end text-nowrap">
                             {% if user.is_active %}
                                 <a href="{% url 'account:update' user.id %}" class="btn btn-outline-brand btn-sm" title="Actualizar">
@@ -93,7 +56,7 @@
                                     </button>
                                 </form>
                             {% else %}
-                                <form method="POST" action="{% url 'account:active' user.id %}" onsubmit="return confirm('¿Deseas reactivar a este usuario?');" style="display:inline;">
+                                <form method="POST" action="{% url 'account:activate' user.id %}" onsubmit="return confirm('¿Deseas reactivar a este usuario?');" style="display:inline;">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-outline-brand btn-sm" title="Reactivar">
                                         <i class="fa-solid fa-rotate-left"></i>
@@ -102,8 +65,6 @@
                             {% endif %}
                         </td>
                     </tr>
-                {% empty %}
-                    <tr><td colspan="7"><div class="empty-state">Aún no hay usuarios registrados.</div></td></tr>
                 {% endfor %}
             </tbody>
         </table>

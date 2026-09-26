@@ -15,21 +15,35 @@
             <span class="nav-label">Inicio</span>
         </a>
 
-        {% if request.user.is_superuser %}
+        {% if request.user.is_platform_admin %}
             <a href="{% url 'company:list' %}"
                class="nav-link-item{% if request.resolver_match.namespace == 'company' %} active{% endif %}"
                {% if request.resolver_match.namespace == 'company' %}aria-current="page"{% endif %}>
                 <span class="nav-icon"><i class="fa-solid fa-suitcase"></i></span>
                 <span class="nav-label">Gestionar empresas</span>
             </a>
+        {% else %}
+            <a href="{% url 'company:info' %}"
+               class="nav-link-item{% if request.resolver_match.url_name == 'info' %} active{% endif %}"
+               {% if request.resolver_match.url_name == 'info' %}aria-current="page"{% endif %}>
+                <span class="nav-icon"><i class="fa-solid fa-building"></i></span>
+                <span class="nav-label">Mi empresa</span>
+            </a>
         {% endif %}
 
-        {% if request.user.is_superuser %}
+        {% if request.user.is_platform_admin %}
             <a href="{% url 'account:list' %}"
-               class="nav-link-item{% if request.resolver_match.namespace == 'account' %} active{% endif %}"
-               {% if request.resolver_match.namespace == 'account' %}aria-current="page"{% endif %}>
+               class="nav-link-item{% if request.resolver_match.namespace == 'account' and 'group' not in request.resolver_match.url_name %} active{% endif %}"
+               {% if request.resolver_match.namespace == 'account' and 'group' not in request.resolver_match.url_name %}aria-current="page"{% endif %}>
                 <span class="nav-icon"><i class="fa-solid fa-users"></i></span>
                 <span class="nav-label">Gestionar usuarios</span>
+            </a>
+
+            <a href="{% url 'account:group_list' %}"
+               class="nav-link-item{% if 'group' in request.resolver_match.url_name %} active{% endif %}"
+               {% if 'group' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
+                <span class="nav-icon"><i class="fa-solid fa-layer-group"></i></span>
+                <span class="nav-label">Grupos</span>
             </a>
         {% endif %}
 

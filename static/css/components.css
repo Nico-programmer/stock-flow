@@ -24,7 +24,6 @@
 
 @media (min-width: 768px) {
   .topbar { padding: 0 32px; }
-  .topbar-hamburger { display: none; }
 }
 
 .topbar-btn {
@@ -42,6 +41,12 @@
 
 .topbar-btn:hover { background: var(--glass-strong); }
 .topbar-btn:focus-visible { outline: 2px solid var(--c-cyan); outline-offset: 2px; }
+
+/* Va DESPUES de .topbar-btn a propósito: misma especificidad (una sola clase), así que el
+   orden en el archivo decide, y esta regla necesita ganarle a "display: inline-flex" arriba. */
+@media (min-width: 768px) {
+  .topbar-hamburger { display: none; }
+}
 
 .topbar-user {
   display: flex;
@@ -305,3 +310,120 @@
 @media (max-width: 767.98px) {
   .pagination-app a, .pagination-app span { min-width: 44px; min-height: 44px; }
 }
+
+/* SweetAlert2: mismo lenguaje visual (vidrio oscuro) que el resto de la app.
+   Son overrides globales por clase, no hace falta tocar los Swal.fire() de cada vista. */
+.swal2-popup {
+  background: rgba(16, 20, 42, 0.92) !important;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg) !important;
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), var(--shadow-lg);
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+
+.swal2-backdrop-show, .swal2-container.swal2-backdrop-show {
+  background: rgba(6, 8, 16, 0.72) !important;
+}
+
+.swal2-title { font-family: var(--font-heading); color: var(--ink) !important; }
+.swal2-html-container { color: var(--ink-soft) !important; }
+
+.swal2-icon.swal2-success { border-color: var(--success) !important; color: var(--success) !important; }
+.swal2-icon.swal2-success [class^='swal2-success-line'] { background-color: var(--success) !important; }
+.swal2-icon.swal2-success .swal2-success-ring { border-color: oklch(0.82 0.14 165 / 0.3) !important; }
+.swal2-icon.swal2-error { border-color: var(--danger) !important; color: var(--danger) !important; }
+.swal2-icon.swal2-error [class^='swal2-x-mark-line'] { background-color: var(--danger) !important; }
+.swal2-icon.swal2-warning { border-color: var(--warning) !important; color: var(--warning) !important; }
+.swal2-icon.swal2-info { border-color: var(--c-blue) !important; color: var(--c-blue) !important; }
+
+.swal2-actions .swal2-confirm,
+.swal2-actions .swal2-cancel {
+  background: var(--grad-primary) !important;
+  box-shadow: var(--glow-primary);
+  border-radius: 12px !important;
+  font-weight: 600;
+}
+
+.swal2-actions .swal2-cancel { background: var(--glass-strong) !important; box-shadow: none; }
+.swal2-actions button:focus { outline: 2px solid var(--c-cyan); outline-offset: 2px; box-shadow: none !important; }
+
+/* DataTables 2.x (renderer "bootstrap", clases reales: dt-container/dt-length/dt-search/dt-info/
+   dt-paging, no las .dataTables_* de la v1 classic). Overrides para que combine con el vidrio oscuro;
+   la tabla en sí ya la estiliza components.css/table-app. */
+.dt-container { color: var(--ink); font-size: 14px; }
+
+.dt-length, .dt-search, .dt-info { color: var(--ink-soft); }
+
+.dt-length label, .dt-search label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+/* Mismo look que los botones de paginación (.dt-paging .page-link más abajo): pill oscura,
+   mismo radio/padding. Pisa el tamaño de .form-select/.form-control-sm por defecto de Bootstrap. */
+.dt-length select.form-select,
+.dt-search input.form-control {
+  background-color: var(--glass) !important;
+  color: var(--ink) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: 10px !important;
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 6px 12px !important;
+  font-size: 14px !important;
+  width: auto !important;
+  cursor: pointer;
+}
+
+.dt-length select.form-select {
+  /* Flechita clara: la de Bootstrap es oscura y se pierde sobre el fondo oscuro. */
+  --bs-form-select-bg-img: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23a9b0c8' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e") !important;
+  padding-right: 30px !important;
+}
+
+.dt-search input.form-control { min-width: 160px; cursor: text; }
+
+.dt-length select.form-select option { background: var(--bg-1); color: var(--ink); }
+
+.dt-length select.form-select:focus,
+.dt-search input.form-control:focus {
+  outline: none;
+  border-color: var(--c-blue) !important;
+  box-shadow: 0 0 0 3px oklch(0.66 0.19 258 / 0.28) !important;
+}
+
+.dt-paging .pagination { gap: 4px; }
+
+.dt-paging .page-link {
+  border-radius: 10px !important;
+  border: 1px solid var(--glass-border) !important;
+  background: var(--glass) !important;
+  color: var(--ink) !important;
+  padding: 6px 12px;
+}
+
+.dt-paging .page-link:hover { background: var(--glass-strong) !important; color: #fff !important; }
+
+.dt-paging .page-item.active .page-link,
+.dt-paging .page-item.active .page-link:hover {
+  background: var(--grad-primary) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  box-shadow: var(--glow-primary);
+}
+
+.dt-paging .page-item.disabled .page-link {
+  color: var(--ink-faint) !important;
+  background: transparent !important;
+  opacity: 0.5;
+}
+
+table.dataTable > thead > tr > th { color: var(--ink-faint) !important; }
+table.dataTable > thead > tr > th.dt-orderable-asc:hover,
+table.dataTable > thead > tr > th.dt-orderable-desc:hover { color: var(--ink) !important; }
+table.dataTable > tbody > tr { background: transparent !important; }

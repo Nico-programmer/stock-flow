@@ -1,0 +1,177 @@
+{% extends "layout.html" %}
+{% load static %}
+{% block title %}Inicio{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/dashboard.css' %}">{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <span class="section-label">Panel general</span>
+    <h1>Hola, {{ request.user.full_name|default:request.user.username }}</h1>
+    <p>{% if selected_company %}Resumen de {{ selected_company.name }}.{% else %}Resumen de toda la plataforma.{% endif %}</p>
+  </div>
+</div>
+
+<form method="get" class="filter-bar mb-3">
+  <select name="company" class="form-select" style="max-width: 280px;" onchange="this.form.submit()">
+    <option value="">Toda la plataforma</option>
+    {% for c in companies %}
+      <option value="{{ c.id }}" {% if selected_company_id == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+    {% endfor %}
+  </select>
+</form>
+
+{% if selected_company %}
+  <div class="kpi-grid">
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-warehouse"></i></span></div>
+      <span class="kpi-value">{{ active_branches }}</span>
+      <span class="kpi-label">Sucursales activas</span>
+    </div>
+    <div class="kpi-card kpi-cyan">
+      <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-users"></i></span></div>
+      <span class="kpi-value">{{ active_users }}</span>
+      <span class="kpi-label">Usuarios activos</span>
+    </div>
+    <div class="kpi-card kpi-purple">
+      <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-layer-group"></i></span></div>
+      <span class="kpi-value">{{ total_groups }}</span>
+      <span class="kpi-label">Grupos</span>
+    </div>
+    <div class="kpi-card kpi-pink">
+      <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-power-off"></i></span></div>
+      <span class="kpi-value">{% if selected_company.is_active %}Activa{% else %}Inactiva{% endif %}</span>
+      <span class="kpi-label">Estado de la empresa</span>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+    <section class="card-surface chart-card" aria-label="Usuarios por grupo">
+      <div class="card-head">
+        <h2 class="form-section-title">Usuarios por grupo</h2>
+        <span class="meta">{{ donut_total }} en total</span>
+      </div>
+      {% if donut_segments %}
+        <div class="donut-wrap">
+          <div class="donut">
+            <svg viewBox="0 0 42 42" aria-hidden="true">
+              <circle class="track" cx="21" cy="21" r="15.915"></circle>
+              {% for s in donut_segments %}
+                <circle class="seg seg-{{ s.color }}" cx="21" cy="21" r="15.915" stroke-dasharray="{{ s.dash }}" stroke-dashoffset="{{ s.offset }}"></circle>
+              {% endfor %}
+            </svg>
+            <div class="donut-center"><strong>{{ donut_total }}</strong><span>usuarios</span></div>
+          </div>
+          <ul class="legend">
+            {% for s in donut_segments %}
+              <li><span class="dot dot-{{ s.color }}"></span><span>{{ s.label }}</span><span class="val">{{ s.value }}</span></li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% else %}
+        <div class="empty-state">Esta empresa todavía no tiene usuarios.</div>
+      {% endif %}
+    </section>
+
+    <section class="card-surface chart-card" aria-label="Equipo">
+      <div class="card-head">
+        <h2 class="form-section-title">Equipo</h2>
+        <span class="meta">{{ colleagues|length }} usuarios</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table-app">
+          <thead><tr><th>Usuario</th><th>Grupo</th><th>Estado</th></tr></thead>
+          <tbody>
+            {% for c in colleagues %}
+              <tr>
+                <td>{{ c.full_name }}</td>
+                <td class="cell-muted">{{ c.group.name|default:"Sin grupo" }}</td>
+                <td>{% if c.is_active %}<span class="badge-stock ok">Activo</span>{% else %}<span class="badge-stock out">Inactivo</span>{% endif %}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="3"><div class="empty-state">Esta empresa todavía no tiene usuarios.</div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+{% else %}
+  <div class="kpi-grid">
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-suitcase"></i></span></div>
+      <span class="kpi-value">{{ active_companies }}</span>
+      <span class="kpi-label">Empresas activas</span>
+    </div>
+    <div class="kpi-card kpi-cyan">
+      <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-users"></i></span></div>
+      <span class="kpi-value">{{ active_users }}</span>
+      <span class="kpi-label">Usuarios activos</span>
+    </div>
+    <div class="kpi-card kpi-purple">
+      <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-layer-group"></i></span></div>
+      <span class="kpi-value">{{ total_groups }}</span>
+      <span class="kpi-label">Grupos creados</span>
+    </div>
+    <div class="kpi-card kpi-pink">
+      <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-power-off"></i></span></div>
+      <span class="kpi-value">{{ inactive_companies }}</span>
+      <span class="kpi-label">Empresas inactivas</span>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+    <section class="card-surface chart-card" aria-label="Usuarios por empresa">
+      <div class="card-head">
+        <h2 class="form-section-title">Usuarios por empresa</h2>
+        <span class="meta">{{ donut_total }} en total</span>
+      </div>
+      {% if donut_segments %}
+        <div class="donut-wrap">
+          <div class="donut">
+            <svg viewBox="0 0 42 42" aria-hidden="true">
+              <circle class="track" cx="21" cy="21" r="15.915"></circle>
+              {% for s in donut_segments %}
+                <circle class="seg seg-{{ s.color }}" cx="21" cy="21" r="15.915" stroke-dasharray="{{ s.dash }}" stroke-dashoffset="{{ s.offset }}"></circle>
+              {% endfor %}
+            </svg>
+            <div class="donut-center"><strong>{{ donut_total }}</strong><span>usuarios</span></div>
+          </div>
+          <ul class="legend">
+            {% for s in donut_segments %}
+              <li><span class="dot dot-{{ s.color }}"></span><span>{{ s.label }}</span><span class="val">{{ s.value }}</span></li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% else %}
+        <div class="empty-state">Todavía no hay usuarios registrados.</div>
+      {% endif %}
+    </section>
+
+    <section class="card-surface chart-card" aria-label="Empresas recientes">
+      <div class="card-head">
+        <h2 class="form-section-title">Empresas recientes</h2>
+        <a href="{% url 'company:list' %}" class="meta">Ver todas</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table-app">
+          <thead><tr><th>Empresa</th><th>Estado</th><th>Alta</th></tr></thead>
+          <tbody>
+            {% for c in recent_companies %}
+              <tr>
+                <td>{{ c.name }}</td>
+                <td>
+                  {% if c.is_active %}<span class="badge-stock ok">Activa</span>{% else %}<span class="badge-stock out">Inactiva</span>{% endif %}
+                </td>
+                <td class="cell-muted">{{ c.created_at|date:"d/m/Y" }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="3"><div class="empty-state">Sin empresas todavía.</div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+{% endif %}
+{% endblock %}

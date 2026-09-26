@@ -5,7 +5,7 @@ from .models import *
 
 # Import decorators
 from django.contrib.auth.decorators import login_required
-from apps.accounts.decorators import superuser_required
+from apps.accounts.decorators import platform_admin_required
 from django.http import JsonResponse
 
 from django.db.models import Count
@@ -19,7 +19,7 @@ from django.db import transaction, IntegrityError
 # Endpoint AJAX: lo llama el JS del form de usuarios al cambiar el <select> de empresa,
 # para repoblar el <select> de sucursal con las sucursales activas de esa empresa.
 @login_required
-@superuser_required
+@platform_admin_required
 def get_branches_by_company(request, company_id):
     """Devuelve las sucursales activas de una empresa, en formato JSON, para el <select> dinámico."""
     branches = Branch.objects.filter(company_id=company_id, is_active=True).values('id', 'name')
@@ -27,18 +27,29 @@ def get_branches_by_company(request, company_id):
     return JsonResponse(list(branches), safe=False)
 
 # Detalle de una empresa y sus sucursales.
+# Sin company_id: cada usuario ve SU PROPIA empresa (request.user.company).
+# Con company_id: solo el admin de plataforma, para ver cualquier empresa desde companies_list.
 @login_required
-def company_info(request, company_id):
-    # OJO: falta el nombre del lookup -> debería ser get_object_or_404(Company, id=company_id).
-    company = get_object_or_404(Company, company_id)
-    branch = Branch.objects.filter(company=company_id)
+def company_info(request, company_id=None):
+    if company_id is not None:
+        if not request.user.is_platform_admin:
+            messages.error(request, "No tienes permiso para ver esta empresa.")
+            return redirect('dashboard')
+        company = get_object_or_404(Company, id=company_id)
+    else:
+        if request.user.is_platform_admin:
+            messages.error(request, "Selecciona una empresa desde el listado.")
+            return redirect('company:list')
+        company = request.user.company
 
-    context = {'company': company, 'branch': branch}
+    branches = company.branches.order_by('name')
+
+    context = {'company': company, 'branches': branches}
     return render(request, "companies/company_info.html", context)
 
 # Listado de empresas. Busqueda / orden / filtro por estado / paginacion: DataTables (cliente).
 @login_required
-@superuser_required
+@platform_admin_required
 def companies_list(request):
     companies = (
         Company.objects
@@ -49,7 +60,7 @@ def companies_list(request):
 
 # Alta de una empresa junto con una o varias sucursales, en la misma transacción.
 @login_required
-@superuser_required
+@platform_admin_required
 def create_companies(request):
     if request.method == 'POST':
         name = request.POST.get("name", "").strip()
@@ -127,7 +138,7 @@ def create_companies(request):
 
 # Edición de una empresa y de sus sucursales (existentes y nuevas) a la vez.
 @login_required
-@superuser_required
+@platform_admin_required
 def update_companies(request, companies_id):
     company = get_object_or_404(Company, id=companies_id)
     branches = Branch.objects.filter(company=company)
@@ -206,7 +217,7 @@ def update_companies(request, companies_id):
 # Reactiva una sucursal puntual y vuelve a la pantalla de edición de su empresa.
 # El front lo dispara con fetch() (no con un <form>, para no anidar formularios en el form de edición).
 @login_required
-@superuser_required
+@platform_admin_required
 def active_branch(request, branch_id):
     branch = get_object_or_404(Branch, id=branch_id)
     branch.is_active = True
@@ -215,7 +226,7 @@ def active_branch(request, branch_id):
 
 # Baja lógica de una sucursal puntual (mismo flujo que active_branch).
 @login_required
-@superuser_required
+@platform_admin_required
 def inactive_branch(request, branch_id):
     branch = get_object_or_404(Branch, id=branch_id)
     branch.is_active = False

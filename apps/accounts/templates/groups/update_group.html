@@ -1,0 +1,99 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}{{ group.name }}{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/forms.css' %}">{% endblock %}
+
+{% block content %}
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'account:group_list' %}" class="btn btn-outline-brand btn-sm">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="mb-0">{{ group.name }}</h1>
+                <p>Actualiza el grupo y sus accesos.</p>
+            </div>
+        </div>
+    </div>
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="card-surface form-card mb-3">
+            <h6 class="form-section-title">Datos del grupo</h6>
+
+            {% include "includes/messages.html" %}
+
+            <div class="form-two-col">
+                <div>
+                    <label for="company" class="form-label">Empresa</label>
+                    <select name="company" id="company" class="form-select">
+                        <option value="" disabled>Selecciona la empresa</option>
+                        {% for c in companies %}
+                            <option value="{{ c.id }}" {% if group.company_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label for="name" class="form-label">Nombre del grupo</label>
+                    <input type="text" id="name" name="name" class="form-control"
+                        placeholder="Ej. Bodega, Cajero" value="{{ group.name }}">
+                </div>
+            </div>
+        </div>
+
+        <div class="card-surface form-card mb-3">
+            <h6 class="form-section-title">Accesos</h6>
+
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" name="can_access_inventory" id="can_access_inventory" {% if group.can_access_inventory %}checked{% endif %}>
+                        <label class="form-check-label" for="can_access_inventory">
+                            <i class="fa-solid fa-boxes-stacked me-1"></i> Inventario
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" name="can_access_users" id="can_access_users" {% if group.can_access_users %}checked{% endif %}>
+                        <label class="form-check-label" for="can_access_users">
+                            <i class="fa-solid fa-users me-1"></i> Usuarios
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-label mt-3 mb-2">Movimientos</div>
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" name="can_access_sales" id="can_access_sales" {% if group.can_access_sales %}checked{% endif %}>
+                        <label class="form-check-label" for="can_access_sales">
+                            <i class="fa-solid fa-right-from-bracket me-1"></i> Salida
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" name="can_access_purchases" id="can_access_purchases" {% if group.can_access_purchases %}checked{% endif %}>
+                        <label class="form-check-label" for="can_access_purchases">
+                            <i class="fa-solid fa-right-to-bracket me-1"></i> Entrada
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="{% url 'account:group_list' %}" class="btn btn-outline-brand">Cancelar</a>
+            <button type="submit" class="btn btn-brand">
+                <i class="fa-solid fa-floppy-disk"></i> Guardar cambios
+            </button>
+        </div>
+    </form>
+{% endblock %}
