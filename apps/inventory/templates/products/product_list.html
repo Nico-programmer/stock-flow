@@ -1,0 +1,84 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Productos{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/products.css' %}">{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <span class="section-label">{% if request.user.is_platform_admin %}{{ company.name }}{% else %}Inventario{% endif %}</span>
+        <h1>Productos</h1>
+        <p>Catálogo de productos de la empresa.</p>
+    </div>
+    <a href="{% if request.user.is_platform_admin %}{% url "inventory:product_create" company.id %}{% else %}{% url "inventory:product_create" %}{% endif %}" class="btn btn-brand">
+        <i class="fa-solid fa-plus"></i> Crear producto
+    </a>
+</div>
+
+<div class="card-surface p-3 p-md-4">
+    <div class="table-responsive">
+        <table class="table-app js-datatable" data-order="0">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Categoría</th>
+                    <th>SKU</th>
+                    <th>Unidad</th>
+                    <th>Precio venta</th>
+                    <th>Cantidad</th>
+                    <th class="text-center">Estado</th>
+                    <th class="nosort"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in products %}
+                    <tr>
+                        <td data-label="Producto" class="fw-semibold">{{ product.name }}</td>
+                        <td data-label="Categoría">{{ product.category.name|default:"—" }}</td>
+                        <td data-label="SKU">{{ product.sku }}</td>
+                        <td data-label="Unidad">{{ product.unit }}</td>
+                        <td data-label="Precio venta">${{ product.sale_price }}</td>
+                        <td data-label="Cantidad">
+                            {{ product.total_stock }}
+                            {% if product.has_low_stock %}
+                                <span class="badge-stock out ms-1" title="Alguna sucursal está en o por debajo del mínimo ({{ product.min_stock }})">bajo</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="Estado" class="text-center">
+                            {% if product.is_active %}
+                                <span class="badge-stock ok">Activo</span>
+                            {% else %}
+                                <span class="badge-stock out">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="Acciones" class="text-end text-nowrap">
+                            <a href="{% url 'inventory:product_detail' product.id %}" class="btn btn-outline-brand btn-sm" title="Ver">
+                                <i class="fa-solid fa-eye"></i>
+                            </a>
+                            <a href="{% url 'inventory:product_update' product.id %}" class="btn btn-outline-brand btn-sm" title="Actualizar">
+                                <i class="fa-solid fa-pen"></i>
+                            </a>
+                            {% if product.is_active %}
+                                <form method="POST" action="{% url 'inventory:product_deactivate' product.id %}" onsubmit="return confirm('¿Seguro que deseas desactivar este producto?');" style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-brand btn-sm" title="Desactivar">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </form>
+                            {% else %}
+                                <form method="POST" action="{% url 'inventory:product_activate' product.id %}" onsubmit="return confirm('¿Deseas reactivar este producto?');" style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-brand btn-sm" title="Reactivar">
+                                        <i class="fa-solid fa-rotate-left"></i>
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

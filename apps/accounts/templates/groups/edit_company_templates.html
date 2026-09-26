@@ -1,0 +1,86 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Plantillas de {{ company.name }}{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/forms.css' %}">{% endblock %}
+{% block messages %}{% endblock %}
+
+{% block content %}
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'account:group_list' %}" class="btn btn-outline-brand btn-sm">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="mb-0">{{ company.name }}</h1>
+                <p>Marca o desmarca las plantillas asignadas a esta empresa.</p>
+            </div>
+        </div>
+    </div>
+
+    {% if messages %}
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const djangoMessages = [
+                    {% for message in messages %}
+                        { text: "{{ message|escapejs }}", tag: "{{ message.tags|default:'info'|escapejs }}" },
+                    {% endfor %}
+                ];
+
+                const redirectUrl = "{{ redirect_url|default:''|escapejs }}";
+
+                djangoMessages.forEach(function (msg, index) {
+                    let icon = 'info';
+                    if (msg.tag.includes('danger')) icon = 'error';
+                    else if (msg.tag.includes('success')) icon = 'success';
+                    else if (msg.tag.includes('warning')) icon = 'warning';
+
+                    Swal.fire({
+                        icon: icon,
+                        text: msg.text,
+                        confirmButtonColor: '#1657D6',
+                        allowEscapeKey: false,
+                        allowOutsideClick: false,
+                    }).then(function () {
+                        if (index === djangoMessages.length - 1 && redirectUrl) {
+                            window.location.href = redirectUrl;
+                        }
+                    });
+                });
+            });
+        </script>
+    {% endif %}
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="card-surface form-card mb-3">
+            <h6 class="form-section-title">Plantillas</h6>
+
+            {% if templates %}
+                <div class="row g-2">
+                    {% for t in templates %}
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="templates" value="{{ t.id }}" id="template_{{ t.id }}"
+                                    {% if t.id|stringformat:"s" in selected_templates %}checked{% endif %}>
+                                <label class="form-check-label" for="template_{{ t.id }}">{{ t.name }}</label>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="small text-muted-soft">
+                    No hay plantillas creadas todavía — <a href="{% url 'account:template_create' %}">crear una</a>.
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="form-actions">
+            <a href="{% url 'account:group_list' %}" class="btn btn-outline-brand">Cancelar</a>
+            <button type="submit" class="btn btn-brand">
+                <i class="fa-solid fa-floppy-disk"></i> Guardar cambios
+            </button>
+        </div>
+    </form>
+{% endblock %}

@@ -427,3 +427,33 @@ table.dataTable > thead > tr > th { color: var(--ink-faint) !important; }
 table.dataTable > thead > tr > th.dt-orderable-asc:hover,
 table.dataTable > thead > tr > th.dt-orderable-desc:hover { color: var(--ink) !important; }
 table.dataTable > tbody > tr { background: transparent !important; }
+
+/* ------------------------------------------------------------------
+   Choices.js (select con buscador, ej. Categoría al crear un producto)
+   La librería se tematiza con sus propias custom properties (--choices-*):
+   así no hay que pelear con el orden de carga del CSS (choices.min.css se
+   carga después de este archivo, vía page_css, y le ganaría a un override
+   normal por especificidad/orden — con variables no importa el orden).
+   ------------------------------------------------------------------ */
+.choices {
+  --choices-bg-color: rgba(255, 255, 255, 0.04);
+  --choices-bg-color-dropdown: var(--bg-1);
+  --choices-keyline-color: var(--glass-border);
+  --choices-border-radius: 12px;
+  --choices-highlighted-color: var(--glass-strong);
+  --choices-text-color: var(--ink-soft);
+  --choices-primary-color: var(--c-blue);
+  --choices-input-height: 46px;
+  --choices-font-size-lg: 14.5px;
+  --choices-font-size-md: 14.5px;
+  margin-bottom: 0;
+}
+
+/* Color de texto: Choices no lo expone como variable, así que va directo con
+   !important (mismo motivo de orden de carga explicado arriba). */
+.choices__inner, .choices__list--single .choices__item { color: var(--ink) !important; }
+.choices__placeholder { color: var(--ink-faint) !important; opacity: 1 !important; }
+.choices__list--dropdown .choices__item, .choices__list[aria-expanded] .choices__item { color: var(--ink-soft) !important; }
+.choices__list--dropdown .choices__item.is-highlighted, .choices__list[aria-expanded] .choices__item.is-highlighted { color: #fff !important; }
+.choices__list--dropdown .choices__input { color: var(--ink) !important; }
+

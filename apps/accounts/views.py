@@ -90,8 +90,24 @@ def userList_view(request):
 @login_required
 @platform_admin_required
 def get_groups_by_company(request, company_id):
-    groups = Group.objects.filter(company_id=company_id).values('id', 'name')
-    return JsonResponse(list(groups), safe=False)
+    # 'name' es una property (delega a template.name), no un campo real: no se puede pedir
+    # directo con .values(), hay que traer template__name y renombrarlo a mano.
+    groups = Group.objects.filter(company_id=company_id).values(
+        'id', 'template__name',
+        'template__can_access_inventory', 'template__can_access_movements',
+        'template__can_access_users', 'template__can_access_reports',
+    )
+    data = [{
+        'id': g['id'],
+        'name': g['template__name'],
+        # El front usa esto para preseleccionar el grupo de mayor acceso al crear un usuario nuevo
+        # (el admin de plataforma solo da de alta al usuario "dueño" de la empresa).
+        'full_access': all([
+            g['template__can_access_inventory'], g['template__can_access_movements'],
+            g['template__can_access_users'], g['template__can_access_reports'],
+        ]),
+    } for g in groups]
+    return JsonResponse(data, safe=False)
 
 @login_required
 @platform_admin_required
@@ -188,6 +204,13 @@ def update_user(request, user_id):
         username = request.POST.get("username", "").strip()
         phone_number = request.POST.get("phone_number", "").strip()
 
+        # Se re-renderiza el form conservando lo que el admin ya había escrito, si hay que volver a mostrarlo.
+        submitted_context = {
+            **context,
+            'full_name': full_name, 'username': username, 'phone_number': phone_number,
+            'selected_company': company_id, 'selected_group': group_id,
+        }
+
         errors = []
 
         if not company_id:
@@ -202,7 +225,7 @@ def update_user(request, user_id):
 
         if errors:
             messages.error(request, errors[0])
-            return render(request, 'users/update_user.html', context)
+            return render(request, 'users/update_user.html', submitted_context)
 
         try:
             with transaction.atomic():
@@ -219,7 +242,7 @@ def update_user(request, user_id):
                 employee.save()
         except (IntegrityError, ValidationError):
             messages.error(request, "Ocurrió un error al actualizar el usuario. Inténtalo de nuevo.")
-            return render(request, "users/update_user.html", context)
+            return render(request, "users/update_user.html", submitted_context)
 
         # Éxito: redirect_url en el contexto para el SweetAlert; el render de abajo lo usa.
         messages.success(request, f"El usuario {username} fue editado exitosamente.")
@@ -259,112 +282,105 @@ def activate_user(request, user_id):
 @login_required
 @platform_admin_required
 def group_list(request):
-    groups = Group.objects.select_related('company').order_by('company__name', 'name')
-    return render(request, "groups/group_list.html", {'groups': groups})
+    groups = Group.objects.select_related('company', 'template').order_by('company__name', 'template__name')
 
+    companies_map = {}
+    for group in groups:
+        companies_map.setdefault(group.company, []).append(group)
+    companies_data = [{'company': company, 'groups': group_list_} for company, group_list_ in companies_map.items()]
+
+    return render(request, "groups/group_list.html", {'companies_data': companies_data})
+
+# No hay "crear grupo" a mano: un Group es solo el link Empresa<->GroupTemplate, así que la
+# única acción posible es asignar una plantilla existente a una empresa.
 @login_required
 @platform_admin_required
-def create_group(request):
+def assign_template(request):
     companies_qs = Company.objects.filter(is_active=True)
+    templates_qs = GroupTemplate.objects.order_by('name')
 
     if request.method == "POST":
         company_id = request.POST.get("company", "").strip()
-        name = request.POST.get("name", "").strip()
-        can_access_inventory = 'can_access_inventory' in request.POST
-        can_access_sales = 'can_access_sales' in request.POST
-        can_access_purchases = 'can_access_purchases' in request.POST
-        can_access_users = 'can_access_users' in request.POST
+        template_ids = request.POST.getlist("templates")
 
         base_context = {
             'companies': companies_qs,
-            'name': name,
+            'templates': templates_qs,
             'selected_company': company_id,
-            'can_access_inventory': can_access_inventory,
-            'can_access_sales': can_access_sales,
-            'can_access_purchases': can_access_purchases,
-            'can_access_users': can_access_users,
+            'selected_templates': template_ids,
         }
 
         errors = []
 
         if not company_id:
             errors.append("Selecciona la empresa.")
-        if not name:
-            errors.append("El nombre del grupo es obligatorio.")
-        if company_id and name and Group.objects.filter(company_id=company_id, name=name).exists():
-            errors.append("Ya existe un grupo con ese nombre en esta empresa.")
+        if not template_ids:
+            errors.append("Selecciona al menos una plantilla.")
 
         if errors:
             messages.error(request, errors[0])
-            return render(request, 'groups/create_group.html', base_context)
+            return render(request, 'groups/assign_template.html', base_context)
 
         company_obj = get_object_or_404(Company, id=company_id, is_active=True)
-        Group.objects.create(
-            company=company_obj,
-            name=name,
-            can_access_inventory=can_access_inventory,
-            can_access_sales=can_access_sales,
-            can_access_purchases=can_access_purchases,
-            can_access_users=can_access_users,
-        )
+        already_assigned = set(Group.objects.filter(company=company_obj, template_id__in=template_ids).values_list('template_id', flat=True))
+        new_template_ids = [t for t in template_ids if int(t) not in already_assigned]
+
+        if not new_template_ids:
+            errors.append("Esa empresa ya tiene asignadas todas las plantillas seleccionadas.")
+            messages.error(request, errors[0])
+            return render(request, 'groups/assign_template.html', base_context)
+
+        Group.objects.bulk_create([
+            Group(company=company_obj, template_id=template_id) for template_id in new_template_ids
+        ])
 
         # Éxito: NO se hace redirect() directo. Se re-renderiza el form con `redirect_url`
         # para que el template muestre el SweetAlert y navegue recién al cerrarlo.
-        messages.success(request, f"Grupo {name} creado correctamente.")
-        return render(request, 'groups/create_group.html', {
+        messages.success(request, f"{len(new_template_ids)} plantilla(s) asignada(s) a {company_obj.name}.")
+        return render(request, 'groups/assign_template.html', {
             'companies': companies_qs,
+            'templates': templates_qs,
             'redirect_url': reverse('account:group_list'),
         })
 
     # GET: form vacío.
-    return render(request, 'groups/create_group.html', {'companies': companies_qs})
+    return render(request, 'groups/assign_template.html', {'companies': companies_qs, 'templates': templates_qs})
 
+# Edita de una vez todas las plantillas de una empresa: los checkboxes marcados quedan
+# asignados y los que se desmarquen se quitan. Los usuarios de las plantillas quitadas
+# quedan "sin grupo" (Group.on_delete=SET_NULL en User).
 @login_required
 @platform_admin_required
-def update_group(request, group_id):
-    group = get_object_or_404(Group, id=group_id)
-    companies_qs = Company.objects.filter(is_active=True)
-
-    context = {'group': group, 'companies': companies_qs}
+def edit_company_templates(request, company_id):
+    company_obj = get_object_or_404(Company, id=company_id)
+    templates_qs = GroupTemplate.objects.order_by('name')
 
     if request.method == "POST":
-        company_id = request.POST.get("company", "").strip()
-        name = request.POST.get("name", "").strip()
+        template_ids = set(int(t) for t in request.POST.getlist("templates"))
+        current_ids = set(Group.objects.filter(company=company_obj).values_list('template_id', flat=True))
 
-        errors = []
+        to_add = template_ids - current_ids
+        to_remove = current_ids - template_ids
 
-        if not company_id:
-            errors.append("Selecciona la empresa.")
-        if not name:
-            errors.append("El nombre del grupo es obligatorio.")
-        # exclude(id=group.id): que el propio grupo no cuente como "duplicado" de sí mismo.
-        if Group.objects.filter(company_id=company_id, name=name).exclude(id=group.id).exists():
-            errors.append("Ya existe un grupo con ese nombre en esta empresa.")
+        Group.objects.bulk_create([Group(company=company_obj, template_id=template_id) for template_id in to_add])
+        Group.objects.filter(company=company_obj, template_id__in=to_remove).delete()
 
-        if errors:
-            messages.error(request, errors[0])
-            return render(request, 'groups/update_group.html', context)
+        messages.success(request, f"Plantillas de {company_obj.name} actualizadas.")
+        return render(request, 'groups/edit_company_templates.html', {
+            'company': company_obj,
+            'templates': templates_qs,
+            'selected_templates': [str(t) for t in template_ids],
+            'redirect_url': reverse('account:group_list'),
+        })
 
-        try:
-            with transaction.atomic():
-                group.company = get_object_or_404(Company, id=company_id, is_active=True)
-                group.name = name
-                group.can_access_inventory = 'can_access_inventory' in request.POST
-                group.can_access_sales = 'can_access_sales' in request.POST
-                group.can_access_purchases = 'can_access_purchases' in request.POST
-                group.can_access_users = 'can_access_users' in request.POST
-                group.full_clean()
-                group.save()
-        except (IntegrityError, ValidationError):
-            messages.error(request, "Ocurrió un error al actualizar el grupo. Inténtalo de nuevo.")
-            return render(request, "groups/update_group.html", context)
+    selected_templates = [str(t) for t in Group.objects.filter(company=company_obj).values_list('template_id', flat=True)]
+    return render(request, 'groups/edit_company_templates.html', {
+        'company': company_obj,
+        'templates': templates_qs,
+        'selected_templates': selected_templates,
+    })
 
-        messages.success(request, f"El grupo {name} fue editado exitosamente.")
-        return redirect('account:group_list')
-
-    return render(request, 'groups/update_group.html', context)
-
-# Elimina un grupo. Los usuarios que lo tenían quedan "sin grupo" (Group.on_delete=SET_NULL en User).
+# Quita la asignación. Los usuarios que la tenían quedan "sin grupo" (Group.on_delete=SET_NULL en User).
 @login_required
 @require_POST
 @platform_admin_required
@@ -372,3 +388,125 @@ def delete_group(request, group_id):
     group = get_object_or_404(Group, id=group_id)
     group.delete()
     return redirect('account:group_list')
+
+"""------------------------------------------------------------------ Group Templates View ------------------------------------------------------------------"""
+
+@login_required
+@platform_admin_required
+def template_list(request):
+    templates = GroupTemplate.objects.order_by('name')
+    return render(request, "groups/template_list.html", {'templates': templates})
+
+@login_required
+@platform_admin_required
+def create_template(request):
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        can_access_inventory = 'can_access_inventory' in request.POST
+        can_access_movements = 'can_access_movements' in request.POST
+        can_access_users = 'can_access_users' in request.POST
+        can_access_reports = 'can_access_reports' in request.POST
+
+        base_context = {
+            'name': name,
+            'can_access_inventory': can_access_inventory,
+            'can_access_movements': can_access_movements,
+            'can_access_users': can_access_users,
+            'can_access_reports': can_access_reports,
+        }
+
+        errors = []
+
+        if not name:
+            errors.append("El nombre de la plantilla es obligatorio.")
+        if name and GroupTemplate.objects.filter(name=name).exists():
+            errors.append("Ya existe una plantilla con ese nombre.")
+
+        if errors:
+            messages.error(request, errors[0])
+            return render(request, 'groups/create_template.html', base_context)
+
+        GroupTemplate.objects.create(
+            name=name,
+            can_access_inventory=can_access_inventory,
+            can_access_movements=can_access_movements,
+            can_access_users=can_access_users,
+            can_access_reports=can_access_reports,
+        )
+
+        # Éxito: NO se hace redirect() directo. Se re-renderiza el form con `redirect_url`
+        # para que el template muestre el SweetAlert y navegue recién al cerrarlo.
+        messages.success(request, f"Plantilla {name} creada correctamente.")
+        return render(request, 'groups/create_template.html', {
+            'redirect_url': reverse('account:template_list'),
+        })
+
+    # GET: form vacío.
+    return render(request, 'groups/create_template.html')
+
+@login_required
+@platform_admin_required
+def update_template(request, template_id):
+    template = get_object_or_404(GroupTemplate, id=template_id)
+    # 'name'/'can_access_*' van siempre planos (no vía template.foo): así el template HTML
+    # no distingue entre valores recién cargados de la BD (GET) y los que el admin ya escribió (POST con error).
+    context = {
+        'template': template, 'name': template.name,
+        'can_access_inventory': template.can_access_inventory, 'can_access_movements': template.can_access_movements,
+        'can_access_users': template.can_access_users, 'can_access_reports': template.can_access_reports,
+    }
+
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        can_access_inventory = 'can_access_inventory' in request.POST
+        can_access_movements = 'can_access_movements' in request.POST
+        can_access_users = 'can_access_users' in request.POST
+        can_access_reports = 'can_access_reports' in request.POST
+
+        # Se re-renderiza el form conservando lo que el admin ya había escrito, si hay que volver a mostrarlo.
+        submitted_context = {
+            **context, 'name': name,
+            'can_access_inventory': can_access_inventory, 'can_access_movements': can_access_movements,
+            'can_access_users': can_access_users, 'can_access_reports': can_access_reports,
+        }
+
+        errors = []
+
+        if not name:
+            errors.append("El nombre de la plantilla es obligatorio.")
+        # exclude(id=template.id): que la propia plantilla no cuente como "duplicada" de sí misma.
+        if GroupTemplate.objects.filter(name=name).exclude(id=template.id).exists():
+            errors.append("Ya existe una plantilla con ese nombre.")
+
+        if errors:
+            messages.error(request, errors[0])
+            return render(request, 'groups/update_template.html', submitted_context)
+
+        try:
+            template.name = name
+            template.can_access_inventory = can_access_inventory
+            template.can_access_movements = can_access_movements
+            template.can_access_users = can_access_users
+            template.can_access_reports = can_access_reports
+            template.full_clean()
+            template.save()
+        except (IntegrityError, ValidationError):
+            messages.error(request, "Ocurrió un error al actualizar la plantilla. Inténtalo de nuevo.")
+            return render(request, "groups/update_template.html", submitted_context)
+
+        # Éxito: NO se hace redirect() directo. Se re-renderiza el form con `redirect_url`
+        # para que el template muestre el SweetAlert y navegue recién al cerrarlo.
+        messages.success(request, f"La plantilla {name} fue editada exitosamente.")
+        context['redirect_url'] = reverse('account:template_list')
+
+    return render(request, 'groups/update_template.html', context)
+
+# Elimina una plantilla. CASCADE: se borran también todos los Group que la tenían asignada
+# (en cualquier empresa), y los usuarios que estaban en esos grupos quedan sin grupo (SET_NULL).
+@login_required
+@require_POST
+@platform_admin_required
+def delete_template(request, template_id):
+    template = get_object_or_404(GroupTemplate, id=template_id)
+    template.delete()
+    return redirect('account:template_list')

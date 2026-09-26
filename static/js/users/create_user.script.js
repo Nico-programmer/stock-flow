@@ -35,11 +35,18 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(groups => {
                 groupSelect.innerHTML = '<option value="">Sin grupo</option>'
 
+                // Si no venía un grupo ya elegido (alta nueva), se preselecciona el de mayor acceso:
+                // quien da de alta al usuario es el admin de plataforma, así que por defecto es
+                // el "dueño" de la empresa, no un empleado sin permisos.
+                const fallbackGroupId = !selectedGroupId
+                    ? (groups.find(group => group.full_access) || {}).id
+                    : null
+
                 groups.forEach(group => {
                     const option = document.createElement('option')
                     option.value = group.id
                     option.textContent = group.name
-                    if (String(group.id) === String(selectedGroupId)) {
+                    if (String(group.id) === String(selectedGroupId) || String(group.id) === String(fallbackGroupId)) {
                         option.selected = true
                     }
                     groupSelect.appendChild(option)

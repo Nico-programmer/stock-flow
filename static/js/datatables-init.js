@@ -3,11 +3,19 @@
    Inicializa DataTables (búsqueda, orden, paginación) en toda
    tabla marcada con class="js-datatable". Columnas con class="nosort"
    quedan fuera del orden/búsqueda (ej: columna de Acciones).
+
+   Orden inicial: por default NINGUNO (respeta el orden que ya viene armado
+   desde el servidor, ej. admin de plataforma primero en user_list). Una tabla
+   puede pedir un orden ascendente por columna con data-order="<indice>",
+   ej. <table class="js-datatable" data-order="0"> ordena asc por la 1ra columna.
    ============================================================ */
 document.addEventListener('DOMContentLoaded', function () {
   if (typeof $ === 'undefined' || !$.fn.DataTable) return
 
   $('.js-datatable').each(function () {
+    const orderCol = this.dataset.order
+    const order = orderCol !== undefined ? [[parseInt(orderCol, 10), 'asc']] : []
+
     $(this).DataTable({
       language: {
         search: 'Buscar:',
@@ -20,9 +28,7 @@ document.addEventListener('DOMContentLoaded', function () {
         paginate: { first: '«', last: '»', next: '›', previous: '‹' },
       },
       pageLength: 10,
-      // Sin orden inicial: respeta el orden que ya viene armado desde el servidor
-      // (ej. admin de plataforma primero). El usuario puede reordenar clickeando una columna.
-      order: [],
+      order: order,
       columnDefs: [{ orderable: false, searchable: false, targets: 'nosort' }],
     })
   })

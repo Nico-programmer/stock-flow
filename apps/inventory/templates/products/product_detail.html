@@ -1,0 +1,74 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}{{ product.name }}{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/products.css' %}">{% endblock %}
+
+{% block content %}
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% if request.user.is_platform_admin %}{% url 'inventory:product_list' product.company.id %}{% else %}{% url 'inventory:product_list' %}{% endif %}" class="btn btn-outline-brand btn-sm">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div>
+                <span class="section-label">{{ product.company.name }}</span>
+                <h1 class="mb-0">{{ product.name }}</h1>
+                <p>Detalle del producto y existencia por sucursal.</p>
+            </div>
+        </div>
+        <a href="{% url 'inventory:product_update' product.id %}" class="btn btn-outline-brand">
+            <i class="fa-solid fa-pen"></i> Editar
+        </a>
+    </div>
+
+    <div class="card-surface p-3 p-md-4 mb-3">
+        <h6 class="form-section-title">Datos generales</h6>
+        <table class="table-app">
+            <tbody>
+                <tr><td>Categoría</td><td>{{ product.category.name|default:"—" }}</td></tr>
+                <tr><td>SKU</td><td>{{ product.sku }}</td></tr>
+                <tr><td>Unidad</td><td>{{ product.unit }}</td></tr>
+                <tr><td>Precio de costo</td><td>${{ product.cost_price }}</td></tr>
+                <tr><td>Precio de venta</td><td>${{ product.sale_price }}</td></tr>
+                <tr><td>Stock mínimo</td><td>{{ product.min_stock }}</td></tr>
+                <tr>
+                    <td>Estado</td>
+                    <td>
+                        {% if product.is_active %}
+                            <span class="badge-stock ok">Activo</span>
+                        {% else %}
+                            <span class="badge-stock out">Inactivo</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card-surface p-3 p-md-4">
+        <div class="card-head">
+            <h6 class="form-section-title mb-0">Existencia por sucursal</h6>
+            <span class="meta">Total: {{ total_stock }}</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table-app table-stack-mobile">
+                <thead><tr><th>Sucursal</th><th>Cantidad</th></tr></thead>
+                <tbody>
+                    {% for stock in stocks %}
+                        <tr>
+                            <td data-label="Sucursal">{{ stock.branch.name }}</td>
+                            <td data-label="Cantidad">
+                                {{ stock.quantity }}
+                                {% if stock.quantity <= product.min_stock %}
+                                    <span class="badge-stock out ms-1">bajo</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="2"><div class="empty-state">Esta empresa aún no tiene sucursales con existencia registrada.</div></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

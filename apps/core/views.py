@@ -40,13 +40,15 @@ def _company_dashboard_context(company, exclude_user_id=None):
     branches_qs = Branch.objects.filter(company=company) if company else Branch.objects.none()
     users_qs = User.objects.filter(company=company) if company else User.objects.none()
 
+    # group__name es una property (delega a template.name), no un campo real: hay que agrupar
+    # por group__template__name y renombrar la clave.
     groups_count = (
         users_qs
-        .values('group__name')
+        .values('group__template__name')
         .annotate(total=Count('id'))
         .order_by('-total')
     )
-    counts = [(row['group__name'] or 'Sin grupo', row['total']) for row in groups_count]
+    counts = [(row['group__template__name'] or 'Sin grupo', row['total']) for row in groups_count]
     segments, total = build_donut(counts)
 
     colleagues_qs = users_qs.exclude(id=exclude_user_id) if exclude_user_id else users_qs

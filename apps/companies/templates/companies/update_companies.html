@@ -3,6 +3,7 @@
 
 {% block title %}Actualizar empresa{% endblock %}
 {% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/forms.css' %}">{% endblock %}
+{% block messages %}{% endblock %}
 
 {% block content %}
     <div class="page-header">
@@ -28,12 +29,12 @@
             <div class="form-two-col">
                 <div>
                     <label for="name" class="form-label">Nombre</label>
-                    <input type="text" class="form-control" id="name" name="name" placeholder="Ingresa el nombre de la empresa" value="{{ company.name }}">
+                    <input type="text" class="form-control" id="name" name="name" placeholder="Ingresa el nombre de la empresa" value="{{ name|default:company.name }}">
                 </div>
 
                 <div>
                     <label for="phone" class="form-label">Teléfono</label>
-                    <input type="text" class="form-control" id="phone" name="phone" placeholder="Ingresa el número de teléfono de la empresa" value="{{ company.phone_number }}">
+                    <input type="text" class="form-control" id="phone" name="phone" placeholder="Ingresa el número de teléfono de la empresa" value="{{ phone|default:company.phone_number }}">
                 </div>
             </div>
         </div>
@@ -59,7 +60,12 @@
                             <input type="text" class="form-control" name="branch_address[]" placeholder="Dirección" value="{{ b.address }}">
                         </div>
                         <div class="col-md-1 d-grid">
-                            {% if b.is_active %}
+                            {% if not b.id %}
+                                {# Fila sin id: sucursal recién tipeada (no guardada todavía), no una ya existente. #}
+                                <button type="button" class="btn btn-outline-brand remove-branch" title="Quitar sucursal">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            {% elif b.is_active %}
                                 <button type="button" class="btn btn-outline-brand toggle-branch" data-url="{% url 'company:inactive_branch' b.id %}" data-confirm="¿Seguro que deseas desactivar esta sucursal?" title="Inactivar">
                                     <i class="fa-solid fa-trash"></i>
                                 </button>

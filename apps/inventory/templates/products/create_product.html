@@ -1,0 +1,145 @@
+{% extends "layout.html" %}
+{% load static inventory_extras %}
+
+{% block title %}Crear producto{% endblock %}
+{% block page_css %}
+    <link rel="stylesheet" href="{% static 'css/pages/forms.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+{% endblock %}
+{% block messages %}{% endblock %}
+
+{% block content %}
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% if request.user.is_platform_admin %}{% url 'inventory:product_list' company.id %}{% else %}{% url 'inventory:product_list' %}{% endif %}" class="btn btn-outline-brand btn-sm">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="mb-0">Crear un nuevo producto</h1>
+                <p>{% if request.user.is_platform_admin %}Para {{ company.name }}.{% else %}Completa los datos del producto.{% endif %}</p>
+            </div>
+        </div>
+    </div>
+
+    {% if messages %}
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const djangoMessages = [
+                    {% for message in messages %}
+                        { text: "{{ message|escapejs }}", tag: "{{ message.tags|default:'info'|escapejs }}" },
+                    {% endfor %}
+                ];
+
+                const redirectUrl = "{{ redirect_url|default:''|escapejs }}";
+
+                djangoMessages.forEach(function (msg, index) {
+                    let icon = 'info';
+                    if (msg.tag.includes('danger')) icon = 'error';
+                    else if (msg.tag.includes('success')) icon = 'success';
+                    else if (msg.tag.includes('warning')) icon = 'warning';
+
+                    Swal.fire({
+                        icon: icon,
+                        text: msg.text,
+                        confirmButtonColor: '#1657D6',
+                        allowEscapeKey: false,
+                        allowOutsideClick: false,
+                    }).then(function () {
+                        if (index === djangoMessages.length - 1 && redirectUrl) {
+                            window.location.href = redirectUrl;
+                        }
+                    });
+                });
+            });
+        </script>
+    {% endif %}
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="card-surface form-card mb-3">
+            <h6 class="form-section-title">Datos del producto</h6>
+
+            <div class="form-two-col">
+                <div>
+                    <label for="name" class="form-label">Nombre</label>
+                    <input type="text" id="name" name="name" class="form-control" maxlength="150" required
+                        placeholder="Nombre del producto" value="{{ name|default:'' }}">
+                </div>
+
+                <div>
+                    <label for="sku" class="form-label">Código (SKU)</label>
+                    <input type="text" id="sku" name="sku" class="form-control" maxlength="50" required
+                        placeholder="Se genera solo con el nombre" value="{{ sku|default:'' }}">
+                    <div class="small text-muted-soft mt-1">Se genera automático a partir del nombre; podés editarlo si querés.</div>
+                </div>
+
+                <div>
+                    <label for="category" class="form-label">Categoría</label>
+                    <select name="category" id="category" class="form-select" required>
+                        <option value="" disabled {% if not selected_category %}selected{% endif %}>Selecciona una categoría</option>
+                        {% for c in categories %}
+                            <option value="{{ c.id }}" {% if c.id|stringformat:"s" == selected_category %}selected{% endif %}>{{ c.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label for="unit" class="form-label">Unidad (cómo se cuenta el stock)</label>
+                    <input type="text" id="unit" name="unit" class="form-control" maxlength="30" required
+                        placeholder="Ej. unidad, kg, caja" value="{{ unit|default:'' }}">
+                </div>
+
+                <div>
+                    <label for="cost_price" class="form-label">Precio de costo</label>
+                    <input type="number" id="cost_price" name="cost_price" class="form-control" step="0.01" min="0.01" required
+                        placeholder="0.00" value="{{ cost_price|default:'' }}">
+                </div>
+
+                <div>
+                    <label for="sale_price" class="form-label">Precio de venta</label>
+                    <input type="number" id="sale_price" name="sale_price" class="form-control" step="0.01" min="0.01" required
+                        placeholder="0.00" value="{{ sale_price|default:'' }}">
+                    <div class="small text-muted-soft mt-1">Debe ser mayor al precio de costo.</div>
+                </div>
+
+                <div>
+                    <label for="min_stock" class="form-label">Stock mínimo</label>
+                    <input type="number" id="min_stock" name="min_stock" class="form-control" step="1" min="5" required
+                        placeholder="Mínimo 5" value="{{ min_stock|default:'' }}">
+                </div>
+            </div>
+        </div>
+
+        <div class="card-surface form-card mb-3">
+            <h6 class="form-section-title">Stock inicial</h6>
+
+            {% if branches %}
+                <div class="row g-2">
+                    {% for b in branches %}
+                        <div class="col-md-6">
+                            <label for="stock_{{ b.id }}" class="form-label">{{ b.name }}</label>
+                            <input type="number" id="stock_{{ b.id }}" name="stock_{{ b.id }}" class="form-control" step="1" min="0"
+                                placeholder="0" value="{{ stock_by_branch|get_item:b.id|default:'' }}">
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="small text-muted-soft mt-2">Podés dejarlo en 0 y cargar existencia después con un movimiento.</div>
+            {% else %}
+                <div class="small text-muted-soft">Esta empresa no tiene sucursales activas todavía.</div>
+            {% endif %}
+        </div>
+
+        <div class="form-actions">
+            <a href="{% if request.user.is_platform_admin %}{% url 'inventory:product_list' company.id %}{% else %}{% url 'inventory:product_list' %}{% endif %}" class="btn btn-outline-brand">Cancelar</a>
+            <button type="submit" class="btn btn-brand">
+                <i class="fa-solid fa-floppy-disk"></i> Crear producto
+            </button>
+        </div>
+    </form>
+
+    {{ existing_skus|json_script:"existing-skus-data" }}
+    <script src="{% static 'js/products/product_sku.script.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+    <script src="{% static 'js/products/category_select.script.js' %}"></script>
+{% endblock %}

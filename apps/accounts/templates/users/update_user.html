@@ -63,31 +63,31 @@
                     <select name="company" id="company" class="form-select">
                         <option value="" disabled>Selecciona la empresa</option>
                         {% for c in companies %}
-                            <option value="{{ c.id }}" {% if employee.company_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+                            <option value="{{ c.id }}" {% if c.id|stringformat:"s" == selected_company|default:employee.company_id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
 
                 <div>
                     <label for="group" class="form-label">Grupo</label>
-                    <select name="group" id="group" class="form-select" data-current="{{ employee.group_id|default:'' }}">
+                    <select name="group" id="group" class="form-select" data-current="{{ selected_group|default:employee.group_id|default:'' }}">
                         <option value="">Primero selecciona una empresa</option>
                     </select>
                 </div>
 
                 <div>
                     <label for="full_name" class="form-label">Nombre completo</label>
-                    <input type="text" id="full_name" name="full_name" class="form-control" placeholder="Nombre y apellidos del usuario" value="{{ employee.full_name }}">
+                    <input type="text" id="full_name" name="full_name" class="form-control" placeholder="Nombre y apellidos del usuario" value="{{ full_name|default:employee.full_name }}">
                 </div>
 
                 <div>
                     <label for="username" class="form-label">Nombre de usuario</label>
-                    <input type="text" id="username" name="username" class="form-control" placeholder="Asigna un nombre de usuario" value="{{ employee.username }}">
+                    <input type="text" id="username" name="username" class="form-control" placeholder="Asigna un nombre de usuario" value="{{ username|default:employee.username }}">
                 </div>
 
                 <div>
                     <label for="phone_number" class="form-label">Teléfono</label>
-                    <input type="text" id="phone_number" name="phone_number" class="form-control" placeholder="Número de contacto" value="{{ employee.phone_number }}">
+                    <input type="text" id="phone_number" name="phone_number" class="form-control" placeholder="Número de contacto" value="{{ phone_number|default:employee.phone_number }}">
                 </div>
             </div>
         </div>

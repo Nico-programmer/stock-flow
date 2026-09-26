@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 
 # Import models
 from .models import *
+from apps.accounts.models import Group, GroupTemplate
 
 # Import decorators
 from django.contrib.auth.decorators import login_required
@@ -101,16 +102,18 @@ def create_companies(request):
                     errors.append("Todas las sucursales deben tener una dirección.")
                     break
 
+        # Filas ya escritas, para repoblar el form si hay que re-renderizarlo (ver abajo).
+        submitted_branches = [{'name': n, 'address': a} for n, a in zip(branch_name, branch_addresses)]
+
         if errors:
             messages.error(request, errors[0])
 
             # Se re-renderiza el form conservando lo que el usuario ya había escrito.
             return render(request, 'companies/create_companies.html', {
                 'name': name,
-                'branch_name': branch_name,
                 'phone': phone,
-                'address': branch_addresses,
-                'is_active': is_active
+                'is_active': is_active,
+                'branches': submitted_branches,
             })
 
         # --- 2. Creación dentro de una transacción (empresa + sucursales, todo o nada) ---
@@ -128,9 +131,19 @@ def create_companies(request):
                         name = b_name,
                         address = b_address,
                     )
+
+                # Asigna todas las plantillas a la empresa nueva (Group = link a la plantilla, no
+                # una copia), para no tener que asignarlas a mano cada vez (ver accounts.GroupTemplate).
+                for template in GroupTemplate.objects.all():
+                    Group.objects.create(company=company, template=template)
         except IntegrityError:
             messages.error(request, 'Ocurrió un error al crear la empresa. Intenta de nuevo.')
-            return render(request, 'companies/create_companies.html')
+            return render(request, 'companies/create_companies.html', {
+                'name': name,
+                'phone': phone,
+                'is_active': is_active,
+                'branches': submitted_branches,
+            })
 
         return redirect('company:list') # Post/Redirect/Get: evita reenviar el form si se recarga
     # GET: form vacío.
@@ -174,9 +187,22 @@ def update_companies(request, companies_id):
         if not has_valid_branch:
             errors.append("Debes tener al menos una sucursal completa.")
 
+        # Filas ya escritas, para repoblar el form si hay que re-renderizarlo (ver abajo).
+        # Los mismos campos (id/name/address/is_active) que trae `branches` en el GET, así el
+        # template no necesita distinguir entre una sucursal ya guardada y una recién tipeada.
+        branches_by_id = {str(b.id): b for b in branches}
+        submitted_branches = [
+            {
+                'id': b_id, 'name': b_name, 'address': b_address,
+                'is_active': branches_by_id[b_id].is_active if b_id in branches_by_id else True,
+            }
+            for b_id, b_name, b_address in zip(branch_ids, branch_names, branch_addresses)
+        ]
+        submitted_context = {**context, 'name': name, 'phone': phone, 'branches': submitted_branches}
+
         if errors:
             messages.error(request, errors[0])
-            return render(request, "companies/update_companies.html", context)
+            return render(request, "companies/update_companies.html", submitted_context)
 
         # --- 2. Actualización dentro de una transacción ---
         try:
@@ -209,7 +235,7 @@ def update_companies(request, companies_id):
                         )
         except IntegrityError:
             messages.error(request, "Ocurrió un error al actualizar la empresa. Intenta de nuevo.")
-            return render(request, "companies/update_companies.html", context)
+            return render(request, "companies/update_companies.html", submitted_context)
 
         return redirect('company:list')
     return render(request, "companies/update_companies.html", context)

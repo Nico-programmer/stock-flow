@@ -9,52 +9,36 @@
     <div>
         <span class="section-label">Administración</span>
         <h1>Grupos</h1>
-        <p>Permisos por módulo, agrupados por empresa.</p>
+        <p>Plantillas asignadas a cada empresa.</p>
     </div>
-    <a href="{% url "account:group_create" %}" class="btn btn-brand"><i class="fa-solid fa-plus"></i> Crear grupo</a>
+    <a href="{% url "account:group_assign" %}" class="btn btn-brand"><i class="fa-solid fa-plus"></i> Asignar plantilla</a>
 </div>
 
 <div class="card-surface p-3 p-md-4">
     <div class="table-responsive">
-        <table class="table-app js-datatable">
+        <table class="table-app js-datatable" data-order="0">
             <thead>
                 <tr>
-                    <th>Grupo</th>
                     <th>Empresa</th>
-                    <th class="text-center">Inventario</th>
-                    <th class="text-center">Salida</th>
-                    <th class="text-center">Entrada</th>
-                    <th class="text-center">Usuarios</th>
+                    <th>Plantillas</th>
                     <th class="nosort"></th>
                 </tr>
             </thead>
             <tbody>
-                {% for group in groups %}
+                {% for data in companies_data %}
                     <tr>
-                        <td data-label="Grupo" class="fw-semibold">{{ group.name }}</td>
-                        <td data-label="Empresa">{{ group.company.name }}</td>
-                        <td data-label="Inventario" class="text-center">
-                            {% if group.can_access_inventory %}<i class="fa-solid fa-circle-check text-success"></i>{% else %}<i class="fa-solid fa-circle-xmark text-secondary"></i>{% endif %}
-                        </td>
-                        <td data-label="Salida" class="text-center">
-                            {% if group.can_access_sales %}<i class="fa-solid fa-circle-check text-success"></i>{% else %}<i class="fa-solid fa-circle-xmark text-secondary"></i>{% endif %}
-                        </td>
-                        <td data-label="Entrada" class="text-center">
-                            {% if group.can_access_purchases %}<i class="fa-solid fa-circle-check text-success"></i>{% else %}<i class="fa-solid fa-circle-xmark text-secondary"></i>{% endif %}
-                        </td>
-                        <td data-label="Usuarios" class="text-center">
-                            {% if group.can_access_users %}<i class="fa-solid fa-circle-check text-success"></i>{% else %}<i class="fa-solid fa-circle-xmark text-secondary"></i>{% endif %}
+                        <td data-label="Empresa" class="fw-semibold">{{ data.company.name }}</td>
+                        <td data-label="Plantillas">
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for group in data.groups %}
+                                    <span class="badge-stock ok">{{ group.name }}</span>
+                                {% endfor %}
+                            </div>
                         </td>
                         <td data-label="Acciones" class="text-end text-nowrap">
-                            <a href="{% url 'account:group_update' group.id %}" class="btn btn-outline-brand btn-sm" title="Actualizar">
+                            <a href="{% url 'account:group_edit' data.company.id %}" class="btn btn-outline-brand btn-sm" title="Editar">
                                 <i class="fa-solid fa-pen"></i>
                             </a>
-                            <form method="POST" action="{% url 'account:group_delete' group.id %}" onsubmit="return confirm('¿Seguro que deseas eliminar este grupo? Los usuarios que lo tengan quedarán sin grupo.');" style="display:inline;">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-outline-brand btn-sm" title="Eliminar">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </form>
                         </td>
                     </tr>
                 {% endfor %}

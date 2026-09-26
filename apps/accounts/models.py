@@ -32,36 +32,74 @@ class UserManager(BaseUserManager):
         return self.create_user(username, password, **extra_fields)
 
 
-class Group(models.Model):
+class GroupTemplate(models.Model):
     """
-    Grupo de permisos, pero PROPIO de cada empresa (no es el Group de django.contrib.auth ni un rol
-    global): cada empresa crea los grupos que necesite ("Bodega", "Cajero", etc.) y les marca a qué
-    módulos da acceso. Reemplaza a role + EmployeePermission del modelo anterior.
+    Plantilla de grupo, GLOBAL (no pertenece a ninguna empresa): el admin de plataforma la arma
+    una sola vez (ej. "Bodega", "Cajero") con sus accesos. Cada Group es solo un LINK entre una
+    Company y una de estas plantillas (ver clase Group más abajo): no copia los valores, los
+    referencia. Si se edita una plantilla, cambia para todas las empresas que la tengan asignada.
     """
+    name = models.CharField(max_length=100, unique=True, verbose_name="Nombre de la plantilla")
 
-    # CASCADE: si se borra la empresa, sus grupos ya no tienen sentido y se borran con ella.
-    company = models.ForeignKey('companies.Company', on_delete=models.CASCADE, related_name='groups', verbose_name="Empresa")
-    name = models.CharField(max_length=100, verbose_name="Nombre del grupo")
-
-    # Un flag por módulo de la app. Se consultan desde las vistas (ej: if user.group.can_access_sales).
     can_access_inventory = models.BooleanField(default=False, verbose_name="Inventario")
-    can_access_sales = models.BooleanField(default=False, verbose_name="Ventas (salida)")
-    can_access_purchases = models.BooleanField(default=False, verbose_name="Compras (entrada)")
+    can_access_movements = models.BooleanField(default=False, verbose_name="Movimientos (entradas y salidas)")
     can_access_users = models.BooleanField(default=False, verbose_name="Usuarios")
+    can_access_reports = models.BooleanField(default=False, verbose_name="Reportes")
 
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de creación")
 
-    # Texto para el admin y cualquier print/log: nombre del grupo + empresa, para no confundir
-    # dos grupos con el mismo nombre en empresas distintas (ej. "Cajero" en Acme vs "Cajero" en Beta).
     def __str__(self):
-        return f'{self.name} · {self.company.name}'
+        return self.name
+
+    class Meta:
+        verbose_name = "Plantilla de grupo"
+        verbose_name_plural = "Plantillas de grupo"
+
+
+class Group(models.Model):
+    """
+    Asigna una GroupTemplate a una Company: NO tiene nombre ni accesos propios, son solo un link.
+    Se crea una vez por empresa/plantilla (ver companies/views.py create_companies, que asigna
+    todas las plantillas a cada Company nueva) y desde ahí se elige por Empresa->Usuario->Grupo.
+    Las properties de abajo (name, can_access_*) delegan al template, para que el resto del código
+    (templates HTML incluidos) siga leyendo group.name / group.can_access_inventory sin cambios.
+    """
+
+    # CASCADE: si se borra la empresa, sus asignaciones de grupo ya no tienen sentido.
+    company = models.ForeignKey('companies.Company', on_delete=models.CASCADE, related_name='groups', verbose_name="Empresa")
+    # CASCADE: si se borra la plantilla, las asignaciones que la usaban dejan de tener sentido.
+    template = models.ForeignKey(GroupTemplate, on_delete=models.CASCADE, related_name='groups', verbose_name="Plantilla")
+
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de creación")
+
+    @property
+    def name(self):
+        return self.template.name
+
+    @property
+    def can_access_inventory(self):
+        return self.template.can_access_inventory
+
+    @property
+    def can_access_movements(self):
+        return self.template.can_access_movements
+
+    @property
+    def can_access_users(self):
+        return self.template.can_access_users
+
+    @property
+    def can_access_reports(self):
+        return self.template.can_access_reports
+
+    def __str__(self):
+        return f'{self.template.name} · {self.company.name}'
 
     class Meta:
         verbose_name = "Grupo"
         verbose_name_plural = "Grupos"
-        # El nombre del grupo es único DENTRO de una empresa, no globalmente (mismo criterio que
-        # Branch en companies/models.py).
-        constraints = [models.UniqueConstraint(fields=['company', 'name'], name='unique_group_name_per_company')]
+        # Una empresa no puede tener la misma plantilla asignada dos veces.
+        constraints = [models.UniqueConstraint(fields=['company', 'template'], name='unique_template_per_company')]
 
 
 class User(AbstractBaseUser):
@@ -90,6 +128,15 @@ class User(AbstractBaseUser):
         related_name='users',
         verbose_name="Grupo"
     )
+    # Sucursal a la que queda restringido el usuario. Null = usuario "de empresa": ve y opera
+    # sobre todas las sucursales, sin importar la que tenga asignada cada movimiento/stock.
+    branch = models.ForeignKey(
+        'companies.Branch',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='users',
+        verbose_name="Sucursal"
+    )
 
     # Campo de login (ver USERNAME_FIELD más abajo).
     username = models.CharField(max_length=25, unique=True, verbose_name="Nombre de usuario")
@@ -116,10 +163,12 @@ class User(AbstractBaseUser):
     # Valida la regla empresa/grupo antes de guardar. El manager (full_clean() en create_user)
     # la dispara siempre; si se edita un User ya existente a mano hay que llamarla explícitamente.
     def clean(self):
-        if self.is_platform_admin and (self.company_id or self.group_id):
-            raise ValidationError("Un administrador de plataforma no debe tener empresa ni grupo asignados.")
+        if self.is_platform_admin and (self.company_id or self.group_id or self.branch_id):
+            raise ValidationError("Un administrador de plataforma no debe tener empresa, grupo ni sucursal asignados.")
         if not self.is_platform_admin and not self.company_id:
             raise ValidationError("El usuario debe pertenecer a una empresa.")
+        if self.branch_id and self.branch.company_id != self.company_id:
+            raise ValidationError("La sucursal debe pertenecer a la misma empresa del usuario.")
 
     # Texto que representa al usuario en el /admin y en cualquier print/log.
     def __str__(self):

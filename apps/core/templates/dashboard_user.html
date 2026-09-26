@@ -75,16 +75,16 @@
             {% if group.can_access_inventory %}<span class="badge-stock ok">Habilitado</span>{% else %}<span class="badge-stock out">Sin acceso</span>{% endif %}
           </li>
           <li>
-            <span class="name"><i class="fa-solid fa-right-from-bracket me-2"></i>Salida</span>
-            {% if group.can_access_sales %}<span class="badge-stock ok">Habilitado</span>{% else %}<span class="badge-stock out">Sin acceso</span>{% endif %}
-          </li>
-          <li>
-            <span class="name"><i class="fa-solid fa-right-to-bracket me-2"></i>Entrada</span>
-            {% if group.can_access_purchases %}<span class="badge-stock ok">Habilitado</span>{% else %}<span class="badge-stock out">Sin acceso</span>{% endif %}
+            <span class="name"><i class="fa-solid fa-right-left me-2"></i>Movimientos</span>
+            {% if group.can_access_movements %}<span class="badge-stock ok">Habilitado</span>{% else %}<span class="badge-stock out">Sin acceso</span>{% endif %}
           </li>
           <li>
             <span class="name"><i class="fa-solid fa-users me-2"></i>Usuarios</span>
             {% if group.can_access_users %}<span class="badge-stock ok">Habilitado</span>{% else %}<span class="badge-stock out">Sin acceso</span>{% endif %}
+          </li>
+          <li>
+            <span class="name"><i class="fa-solid fa-chart-line me-2"></i>Reportes</span>
+            {% if group.can_access_reports %}<span class="badge-stock ok">Habilitado</span>{% else %}<span class="badge-stock out">Sin acceso</span>{% endif %}
           </li>
         </ul>
       {% else %}

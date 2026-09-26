@@ -1,0 +1,74 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Crear categoría{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/forms.css' %}">{% endblock %}
+{% block messages %}{% endblock %}
+
+{% block content %}
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'inventory:category_list' %}" class="btn btn-outline-brand btn-sm">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="mb-0">Crear una nueva categoría</h1>
+                <p>Queda disponible para que cualquier empresa la use en sus productos.</p>
+            </div>
+        </div>
+    </div>
+
+    {% if messages %}
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const djangoMessages = [
+                    {% for message in messages %}
+                        { text: "{{ message|escapejs }}", tag: "{{ message.tags|default:'info'|escapejs }}" },
+                    {% endfor %}
+                ];
+
+                const redirectUrl = "{{ redirect_url|default:''|escapejs }}";
+
+                djangoMessages.forEach(function (msg, index) {
+                    let icon = 'info';
+                    if (msg.tag.includes('danger')) icon = 'error';
+                    else if (msg.tag.includes('success')) icon = 'success';
+                    else if (msg.tag.includes('warning')) icon = 'warning';
+
+                    Swal.fire({
+                        icon: icon,
+                        text: msg.text,
+                        confirmButtonColor: '#1657D6',
+                        allowEscapeKey: false,
+                        allowOutsideClick: false,
+                    }).then(function () {
+                        if (index === djangoMessages.length - 1 && redirectUrl) {
+                            window.location.href = redirectUrl;
+                        }
+                    });
+                });
+            });
+        </script>
+    {% endif %}
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="card-surface form-card mb-3">
+            <h6 class="form-section-title">Datos de la categoría</h6>
+
+            <div>
+                <label for="name" class="form-label">Nombre de la categoría</label>
+                <input type="text" id="name" name="name" class="form-control" maxlength="100"
+                    placeholder="Ej. Ferretería, Electrónica" value="{{ name|default:'' }}">
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="{% url 'inventory:category_list' %}" class="btn btn-outline-brand">Cancelar</a>
+            <button type="submit" class="btn btn-brand">
+                <i class="fa-solid fa-floppy-disk"></i> Crear categoría
+            </button>
+        </div>
+    </form>
+{% endblock %}

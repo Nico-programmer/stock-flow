@@ -8,6 +8,8 @@
 
     <div class="sidebar-nav">
 
+        <span class="sidebar-section-label">Principal</span>
+
         <a href="{% url 'dashboard' %}"
            class="nav-link-item{% if request.resolver_match.url_name == 'dashboard' %} active{% endif %}"
            {% if request.resolver_match.url_name == 'dashboard' %}aria-current="page"{% endif %}>
@@ -16,38 +18,67 @@
         </a>
 
         {% if request.user.is_platform_admin %}
+            <span class="sidebar-section-label">Empresas</span>
+
             <a href="{% url 'company:list' %}"
-               class="nav-link-item{% if request.resolver_match.namespace == 'company' %} active{% endif %}"
-               {% if request.resolver_match.namespace == 'company' %}aria-current="page"{% endif %}>
+               class="nav-link-item{% if request.resolver_match.namespace == 'company' or request.resolver_match.namespace == 'inventory' and 'category_' not in request.resolver_match.url_name %} active{% endif %}"
+               {% if request.resolver_match.namespace == 'company' or request.resolver_match.namespace == 'inventory' and 'category_' not in request.resolver_match.url_name %}aria-current="page"{% endif %}>
                 <span class="nav-icon"><i class="fa-solid fa-suitcase"></i></span>
                 <span class="nav-label">Gestionar empresas</span>
             </a>
+
+            <span class="sidebar-section-label">Accesos y permisos</span>
+
+            <a href="{% url 'account:list' %}"
+               class="nav-link-item{% if request.resolver_match.namespace == 'account' and 'group_' not in request.resolver_match.url_name and 'template_' not in request.resolver_match.url_name %} active{% endif %}"
+               {% if request.resolver_match.namespace == 'account' and 'group_' not in request.resolver_match.url_name and 'template_' not in request.resolver_match.url_name %}aria-current="page"{% endif %}>
+                <span class="nav-icon"><i class="fa-solid fa-users"></i></span>
+                <span class="nav-label">Gestionar usuarios</span>
+            </a>
+
+            <a href="{% url 'account:group_list' %}"
+               class="nav-link-item{% if 'group_' in request.resolver_match.url_name %} active{% endif %}"
+               {% if 'group_' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
+                <span class="nav-icon"><i class="fa-solid fa-layer-group"></i></span>
+                <span class="nav-label">Grupos</span>
+            </a>
+
+            <a href="{% url 'account:template_list' %}"
+               class="nav-link-item{% if 'template_' in request.resolver_match.url_name %} active{% endif %}"
+               {% if 'template_' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
+                <span class="nav-icon"><i class="fa-solid fa-copy"></i></span>
+                <span class="nav-label">Plantillas de grupo</span>
+            </a>
+
+            <span class="sidebar-section-label">Catálogo</span>
+
+            <a href="{% url 'inventory:category_list' %}"
+               class="nav-link-item{% if 'category_' in request.resolver_match.url_name %} active{% endif %}"
+               {% if 'category_' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
+                <span class="nav-icon"><i class="fa-solid fa-tags"></i></span>
+                <span class="nav-label">Categorías</span>
+            </a>
         {% else %}
+            <span class="sidebar-section-label">Empresa</span>
+
             <a href="{% url 'company:info' %}"
                class="nav-link-item{% if request.resolver_match.url_name == 'info' %} active{% endif %}"
                {% if request.resolver_match.url_name == 'info' %}aria-current="page"{% endif %}>
                 <span class="nav-icon"><i class="fa-solid fa-building"></i></span>
                 <span class="nav-label">Mi empresa</span>
             </a>
+
+            {% if request.user.group.can_access_inventory %}
+                <span class="sidebar-section-label">Operación</span>
+
+                <a href="{% url 'inventory:product_list' %}"
+                   class="nav-link-item{% if request.resolver_match.namespace == 'inventory' %} active{% endif %}"
+                   {% if request.resolver_match.namespace == 'inventory' %}aria-current="page"{% endif %}>
+                    <span class="nav-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
+                    <span class="nav-label">Productos</span>
+                </a>
+            {% endif %}
         {% endif %}
-
-        {% if request.user.is_platform_admin %}
-            <a href="{% url 'account:list' %}"
-               class="nav-link-item{% if request.resolver_match.namespace == 'account' and 'group' not in request.resolver_match.url_name %} active{% endif %}"
-               {% if request.resolver_match.namespace == 'account' and 'group' not in request.resolver_match.url_name %}aria-current="page"{% endif %}>
-                <span class="nav-icon"><i class="fa-solid fa-users"></i></span>
-                <span class="nav-label">Gestionar usuarios</span>
-            </a>
-
-            <a href="{% url 'account:group_list' %}"
-               class="nav-link-item{% if 'group' in request.resolver_match.url_name %} active{% endif %}"
-               {% if 'group' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
-                <span class="nav-icon"><i class="fa-solid fa-layer-group"></i></span>
-                <span class="nav-label">Grupos</span>
-            </a>
-        {% endif %}
-
-        {# Operación (inventario/ventas/compras) se agrega cuando existan las apps del nuevo diseño. #}
 
     </div>
 

@@ -1,0 +1,47 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Categorías{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/products.css' %}">{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <span class="section-label">Administración</span>
+        <h1>Categorías</h1>
+        <p>Categorías globales disponibles para todas las empresas al crear productos.</p>
+    </div>
+    <a href="{% url "inventory:category_create" %}" class="btn btn-brand"><i class="fa-solid fa-plus"></i> Crear categoría</a>
+</div>
+
+<div class="card-surface p-3 p-md-4">
+    <div class="table-responsive">
+        <table class="table-app js-datatable" data-order="0">
+            <thead>
+                <tr>
+                    <th>Categoría</th>
+                    <th class="nosort"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for category in categories %}
+                    <tr>
+                        <td data-label="Categoría" class="fw-semibold">{{ category.name }}</td>
+                        <td data-label="Acciones" class="text-end text-nowrap">
+                            <a href="{% url 'inventory:category_update' category.id %}" class="btn btn-outline-brand btn-sm" title="Actualizar">
+                                <i class="fa-solid fa-pen"></i>
+                            </a>
+                            <form method="POST" action="{% url 'inventory:category_delete' category.id %}" onsubmit="return confirm('¿Seguro que deseas eliminar esta categoría? Los productos que la tengan quedarán sin categoría.');" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-brand btn-sm" title="Eliminar">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

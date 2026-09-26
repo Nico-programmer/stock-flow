@@ -20,9 +20,15 @@ urlpatterns = [
 
     # Groups Views
     path('group-list/', group_list, name="group_list"),
-    path('create-group/', create_group, name="group_create"),
-    path('update-group/<int:group_id>/', update_group, name="group_update"),
+    path('assign-template/', assign_template, name="group_assign"),
+    path('edit-company-templates/<int:company_id>/', edit_company_templates, name="group_edit"),
     path('delete-group/<int:group_id>/', delete_group, name="group_delete"),
+
+    # Group Templates Views
+    path('template-list/', template_list, name="template_list"),
+    path('create-template/', create_template, name="template_create"),
+    path('update-template/<int:template_id>/', update_template, name="template_update"),
+    path('delete-template/<int:template_id>/', delete_template, name="template_delete"),
 
     # Endpoint
     path('get-groups/<int:company_id>/', get_groups_by_company, name='get_groups_by_company'),

@@ -3,6 +3,7 @@
 
 {% block title %}Crear una empresa{% endblock %}
 {% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/forms.css' %}">{% endblock %}
+{% block messages %}{% endblock %}
 
 {% block content %}
     <div class="page-header">
@@ -33,7 +34,7 @@
 
                 <div>
                     <label for="phone" class="form-label">Teléfono</label>
-                    <input type="text" class="form-control" id="phone" name="phone" placeholder="Ingresa el número de teléfono de la empresa" value="{{ name|default:'' }}">
+                    <input type="text" class="form-control" id="phone" name="phone" placeholder="Ingresa el número de teléfono de la empresa" value="{{ phone|default:'' }}">
                 </div>
             </div>
         </div>
@@ -47,21 +48,39 @@
             </div>
 
             <div id="branches-container">
-                <div class="branch-row row g-3 align-items-end mb-2">
-                    <div class="col-md-4">
-                        <label class="form-label">Nombre de la sucursal</label>
-                        <input type="text" class="form-control" name="branch_name[]" placeholder="Ej. Sucursal Centro">
+                {% for b in branches %}
+                    <div class="branch-row row g-3 align-items-end mb-2">
+                        <div class="col-md-4">
+                            <label class="form-label">Nombre de la sucursal</label>
+                            <input type="text" class="form-control" name="branch_name[]" placeholder="Ej. Sucursal Centro" value="{{ b.name }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Dirección</label>
+                            <input type="text" class="form-control" name="branch_address[]" placeholder="Dirección" value="{{ b.address }}">
+                        </div>
+                        <div class="col-md-1 d-grid">
+                            <button type="button" class="btn btn-outline-brand remove-branch" title="Quitar sucursal">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Dirección</label>
-                        <input type="text" class="form-control" name="branch_address[]" placeholder="Dirección">
+                {% empty %}
+                    <div class="branch-row row g-3 align-items-end mb-2">
+                        <div class="col-md-4">
+                            <label class="form-label">Nombre de la sucursal</label>
+                            <input type="text" class="form-control" name="branch_name[]" placeholder="Ej. Sucursal Centro">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Dirección</label>
+                            <input type="text" class="form-control" name="branch_address[]" placeholder="Dirección">
+                        </div>
+                        <div class="col-md-1 d-grid">
+                            <button type="button" class="btn btn-outline-brand remove-branch" title="Quitar sucursal">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div class="col-md-1 d-grid">
-                        <button type="button" class="btn btn-outline-brand remove-branch" title="Quitar sucursal">
-                            <i class="fa-solid fa-xmark"></i>
-                        </button>
-                    </div>
-                </div>
+                {% endfor %}
             </div>
 
             <template id="branch-row-template">

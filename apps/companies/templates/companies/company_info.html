@@ -12,9 +12,14 @@
             <p>Información general y sucursales.</p>
         </div>
         {% if request.user.is_platform_admin %}
-            <a href="{% url 'company:update' company.id %}" class="btn btn-outline-brand">
-                <i class="fa-solid fa-pen"></i> Editar
-            </a>
+            <div class="d-flex gap-2">
+                <a href="{% url 'inventory:product_list' company.id %}" class="btn btn-outline-brand">
+                    <i class="fa-solid fa-boxes-stacked"></i> Ver inventario
+                </a>
+                <a href="{% url 'company:update' company.id %}" class="btn btn-outline-brand">
+                    <i class="fa-solid fa-pen"></i> Editar
+                </a>
+            </div>
         {% endif %}
     </div>
 

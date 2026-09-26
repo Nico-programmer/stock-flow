@@ -1,0 +1,63 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Plantillas de grupo{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/products.css' %}">{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <span class="section-label">Administración</span>
+        <h1>Plantillas de grupo</h1>
+        <p>Se asignan automáticamente a cada empresa nueva. Editar una plantilla cambia sus accesos en todas las empresas que la tengan.</p>
+    </div>
+    <a href="{% url "account:template_create" %}" class="btn btn-brand"><i class="fa-solid fa-plus"></i> Crear plantilla</a>
+</div>
+
+<div class="card-surface p-3 p-md-4">
+    <div class="table-responsive">
+        <table class="table-app js-datatable" data-order="0">
+            <thead>
+                <tr>
+                    <th>Plantilla</th>
+                    <th class="text-center">Inventario</th>
+                    <th class="text-center">Movimientos</th>
+                    <th class="text-center">Usuarios</th>
+                    <th class="text-center">Reportes</th>
+                    <th class="nosort"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for template in templates %}
+                    <tr>
+                        <td data-label="Plantilla" class="fw-semibold">{{ template.name }}</td>
+                        <td data-label="Inventario" class="text-center">
+                            {% if template.can_access_inventory %}<i class="fa-solid fa-circle-check text-success"></i>{% else %}<i class="fa-solid fa-circle-xmark text-secondary"></i>{% endif %}
+                        </td>
+                        <td data-label="Movimientos" class="text-center">
+                            {% if template.can_access_movements %}<i class="fa-solid fa-circle-check text-success"></i>{% else %}<i class="fa-solid fa-circle-xmark text-secondary"></i>{% endif %}
+                        </td>
+                        <td data-label="Usuarios" class="text-center">
+                            {% if template.can_access_users %}<i class="fa-solid fa-circle-check text-success"></i>{% else %}<i class="fa-solid fa-circle-xmark text-secondary"></i>{% endif %}
+                        </td>
+                        <td data-label="Reportes" class="text-center">
+                            {% if template.can_access_reports %}<i class="fa-solid fa-circle-check text-success"></i>{% else %}<i class="fa-solid fa-circle-xmark text-secondary"></i>{% endif %}
+                        </td>
+                        <td data-label="Acciones" class="text-end text-nowrap">
+                            <a href="{% url 'account:template_update' template.id %}" class="btn btn-outline-brand btn-sm" title="Actualizar">
+                                <i class="fa-solid fa-pen"></i>
+                            </a>
+                            <form method="POST" action="{% url 'account:template_delete' template.id %}" onsubmit="return confirm('¿Seguro que deseas eliminar esta plantilla? Se quita de TODAS las empresas que la tengan asignada, y sus usuarios quedan sin grupo.');" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-brand btn-sm" title="Eliminar">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,116 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Crear plantilla{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/forms.css' %}">{% endblock %}
+{% block messages %}{% endblock %}
+
+{% block content %}
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'account:template_list' %}" class="btn btn-outline-brand btn-sm">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="mb-0">Crear una nueva plantilla</h1>
+                <p>Se copia como grupo en cada empresa nueva que se cree.</p>
+            </div>
+        </div>
+    </div>
+
+    {% if messages %}
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const djangoMessages = [
+                    {% for message in messages %}
+                        { text: "{{ message|escapejs }}", tag: "{{ message.tags|default:'info'|escapejs }}" },
+                    {% endfor %}
+                ];
+
+                const redirectUrl = "{{ redirect_url|default:''|escapejs }}";
+
+                djangoMessages.forEach(function (msg, index) {
+                    let icon = 'info';
+                    if (msg.tag.includes('danger')) icon = 'error';
+                    else if (msg.tag.includes('success')) icon = 'success';
+                    else if (msg.tag.includes('warning')) icon = 'warning';
+
+                    Swal.fire({
+                        icon: icon,
+                        text: msg.text,
+                        confirmButtonColor: '#1657D6',
+                        allowEscapeKey: false,
+                        allowOutsideClick: false,
+                    }).then(function () {
+                        if (index === djangoMessages.length - 1 && redirectUrl) {
+                            window.location.href = redirectUrl;
+                        }
+                    });
+                });
+            });
+        </script>
+    {% endif %}
+
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="card-surface form-card mb-3">
+            <h6 class="form-section-title">Datos de la plantilla</h6>
+
+            <div>
+                <label for="name" class="form-label">Nombre de la plantilla</label>
+                <input type="text" id="name" name="name" class="form-control"
+                    placeholder="Ej. Bodega, Cajero" value="{{ name|default:'' }}">
+            </div>
+        </div>
+
+        <div class="card-surface form-card mb-3">
+            <h6 class="form-section-title">Accesos</h6>
+
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" name="can_access_inventory" id="can_access_inventory" {% if can_access_inventory %}checked{% endif %}>
+                        <label class="form-check-label" for="can_access_inventory">
+                            <i class="fa-solid fa-boxes-stacked me-1"></i> Inventario
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" name="can_access_movements" id="can_access_movements" {% if can_access_movements %}checked{% endif %}>
+                        <label class="form-check-label" for="can_access_movements">
+                            <i class="fa-solid fa-right-left me-1"></i> Movimientos
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" name="can_access_users" id="can_access_users" {% if can_access_users %}checked{% endif %}>
+                        <label class="form-check-label" for="can_access_users">
+                            <i class="fa-solid fa-users me-1"></i> Usuarios
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" name="can_access_reports" id="can_access_reports" {% if can_access_reports %}checked{% endif %}>
+                        <label class="form-check-label" for="can_access_reports">
+                            <i class="fa-solid fa-chart-line me-1"></i> Reportes
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="{% url 'account:template_list' %}" class="btn btn-outline-brand">Cancelar</a>
+            <button type="submit" class="btn btn-brand">
+                <i class="fa-solid fa-floppy-disk"></i> Crear plantilla
+            </button>
+        </div>
+    </form>
+{% endblock %}
