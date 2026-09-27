@@ -31,7 +31,7 @@
                             <a href="{% url 'inventory:category_update' category.id %}" class="btn btn-outline-brand btn-sm" title="Actualizar">
                                 <i class="fa-solid fa-pen"></i>
                             </a>
-                            <form method="POST" action="{% url 'inventory:category_delete' category.id %}" onsubmit="return confirm('¿Seguro que deseas eliminar esta categoría? Los productos que la tengan quedarán sin categoría.');" style="display:inline;">
+                            <form method="POST" action="{% url 'inventory:category_delete' category.id %}" class="js-confirm-submit" data-confirm-title="¿Eliminar categoría?" data-confirm-text="Los productos que la tengan quedarán sin categoría." data-confirm-button="Sí, eliminar" style="display:inline;">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-outline-brand btn-sm" title="Eliminar">
                                     <i class="fa-solid fa-trash"></i>

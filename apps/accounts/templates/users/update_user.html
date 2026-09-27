@@ -125,7 +125,8 @@
                             <thead>
                                 <tr>
                                     <th>Grupo</th>
-                                    <th class="text-center" title="Inventario">Inv.</th>
+                                    <th class="text-center" title="Inventario (ver)">Inv.</th>
+                                    <th class="text-center" title="Administrar inventario">Adm.</th>
                                     <th class="text-center" title="Movimientos">Mov.</th>
                                     <th class="text-center" title="Usuarios">Usu.</th>
                                     <th class="text-center" title="Reportes">Rep.</th>
@@ -136,6 +137,7 @@
                                     <tr>
                                         <td class="fw-semibold">{{ t.name }}</td>
                                         <td class="text-center">{% if t.can_access_inventory %}<i class="fa-solid fa-circle-check text-success"></i>{% else %}<i class="fa-solid fa-circle-xmark text-secondary"></i>{% endif %}</td>
+                                        <td class="text-center">{% if t.can_manage_inventory %}<i class="fa-solid fa-circle-check text-success"></i>{% else %}<i class="fa-solid fa-circle-xmark text-secondary"></i>{% endif %}</td>
                                         <td class="text-center">{% if t.can_access_movements %}<i class="fa-solid fa-circle-check text-success"></i>{% else %}<i class="fa-solid fa-circle-xmark text-secondary"></i>{% endif %}</td>
                                         <td class="text-center">{% if t.can_access_users %}<i class="fa-solid fa-circle-check text-success"></i>{% else %}<i class="fa-solid fa-circle-xmark text-secondary"></i>{% endif %}</td>
                                         <td class="text-center">{% if t.can_access_reports %}<i class="fa-solid fa-circle-check text-success"></i>{% else %}<i class="fa-solid fa-circle-xmark text-secondary"></i>{% endif %}</td>

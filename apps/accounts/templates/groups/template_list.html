@@ -21,6 +21,7 @@
                 <tr>
                     <th>Plantilla</th>
                     <th class="text-center">Inventario</th>
+                    <th class="text-center">Administrar</th>
                     <th class="text-center">Movimientos</th>
                     <th class="text-center">Usuarios</th>
                     <th class="text-center">Reportes</th>
@@ -33,6 +34,9 @@
                         <td data-label="Plantilla" class="fw-semibold">{{ template.name }}</td>
                         <td data-label="Inventario" class="text-center">
                             {% if template.can_access_inventory %}<i class="fa-solid fa-circle-check text-success"></i>{% else %}<i class="fa-solid fa-circle-xmark text-secondary"></i>{% endif %}
+                        </td>
+                        <td data-label="Administrar" class="text-center">
+                            {% if template.can_manage_inventory %}<i class="fa-solid fa-circle-check text-success"></i>{% else %}<i class="fa-solid fa-circle-xmark text-secondary"></i>{% endif %}
                         </td>
                         <td data-label="Movimientos" class="text-center">
                             {% if template.can_access_movements %}<i class="fa-solid fa-circle-check text-success"></i>{% else %}<i class="fa-solid fa-circle-xmark text-secondary"></i>{% endif %}
@@ -47,7 +51,7 @@
                             <a href="{% url 'account:template_update' template.id %}" class="btn btn-outline-brand btn-sm" title="Actualizar">
                                 <i class="fa-solid fa-pen"></i>
                             </a>
-                            <form method="POST" action="{% url 'account:template_delete' template.id %}" onsubmit="return confirm('¿Seguro que deseas eliminar esta plantilla? Se quita de TODAS las empresas que la tengan asignada, y sus usuarios quedan sin grupo.');" style="display:inline;">
+                            <form method="POST" action="{% url 'account:template_delete' template.id %}" class="js-confirm-submit" data-confirm-title="¿Eliminar plantilla?" data-confirm-text="Se quita de TODAS las empresas que la tengan asignada, y sus usuarios quedan sin grupo." data-confirm-button="Sí, eliminar" style="display:inline;">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-outline-brand btn-sm" title="Eliminar">
                                     <i class="fa-solid fa-trash"></i>

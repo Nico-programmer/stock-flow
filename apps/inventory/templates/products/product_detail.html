@@ -16,9 +16,11 @@
                 <p>Detalle del producto y existencia por sucursal.</p>
             </div>
         </div>
-        <a href="{% url 'inventory:product_update' product.id %}" class="btn btn-outline-brand">
-            <i class="fa-solid fa-pen"></i> Editar
-        </a>
+        {% if request.user.is_platform_admin or request.user.group.can_manage_inventory %}
+            <a href="{% url 'inventory:product_update' product.id %}" class="btn btn-outline-brand">
+                <i class="fa-solid fa-pen"></i> Editar
+            </a>
+        {% endif %}
     </div>
 
     <div class="card-surface p-3 p-md-4 mb-3">

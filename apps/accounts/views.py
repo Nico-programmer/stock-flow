@@ -40,12 +40,15 @@ def login_view(request):
             # authenticate() devuelve el usuario si las credenciales son válidas, o None.
             user = authenticate(request, username=username, password=password)
 
-            if user is not None:
-                # Cuenta dada de baja (soft delete): credenciales OK pero no se le deja entrar.
-                if not user.is_active:
-                    messages.error(request, "Tu cuenta está inactiva. Contacta al administrador.")
+            if user is None:
+                # ModelBackend rechaza usuarios inactivos en authenticate() sin distinguir el motivo,
+                # así que si las credenciales son válidas pero está inactivo, lo verificamos aparte.
+                inactive_user = User.objects.filter(username=username, is_active=False).first()
+                if inactive_user is not None and inactive_user.check_password(password):
+                    messages.error(request, "Tu cuenta está inactiva y no tiene acceso a la plataforma. Comunícate con la persona encargada de la gestión de usuarios en tu empresa para reactivarla.")
                     return render(request, 'login.html', {'form': form})
 
+            if user is not None:
                 login(request, user)  # crea la sesión
 
                 # Éxito: NO se hace redirect() directo. Se re-renderiza el login con `redirect_url`
@@ -98,7 +101,7 @@ def get_groups_by_company(request, company_id):
     # directo con .values(), hay que traer template__name y renombrarlo a mano.
     groups = Group.objects.filter(company_id=company_id).values(
         'id', 'template__name',
-        'template__can_access_inventory', 'template__can_access_movements',
+        'template__can_access_inventory', 'template__can_manage_inventory', 'template__can_access_movements',
         'template__can_access_users', 'template__can_access_reports',
     )
     data = [{
@@ -107,7 +110,7 @@ def get_groups_by_company(request, company_id):
         # El front usa esto para preseleccionar el grupo de mayor acceso al crear un usuario nuevo
         # (el admin de plataforma solo da de alta al usuario "dueño" de la empresa).
         'full_access': all([
-            g['template__can_access_inventory'], g['template__can_access_movements'],
+            g['template__can_access_inventory'], g['template__can_manage_inventory'], g['template__can_access_movements'],
             g['template__can_access_users'], g['template__can_access_reports'],
         ]),
     } for g in groups]
@@ -321,9 +324,16 @@ def deactivate_user(request, user_id):
     if employee.id == request.user.id:
         return redirect("account:list")
 
+    # El Gerente General (usuario de empresa, sin sucursal) solo lo puede desactivar
+    # un admin de plataforma, nunca otro empleado con permiso de Usuarios.
+    if not request.user.is_platform_admin and not employee.branch_id:
+        messages.error(request, "No puedes desactivar al Gerente General de la empresa.")
+        return redirect("account:list")
+
     employee.is_active = False
     employee.save()
 
+    messages.success(request, f"{employee.full_name} fue desactivado correctamente.")
     return redirect("account:list")
 
 # Reactiva un usuario dado de baja.
@@ -340,6 +350,7 @@ def activate_user(request, user_id):
     employee.is_active = True
     employee.save()
 
+    messages.success(request, f"{employee.full_name} fue reactivado correctamente.")
     return redirect("account:list")
 
 """------------------------------------------------------------------ Groups View ------------------------------------------------------------------"""
@@ -468,6 +479,7 @@ def create_template(request):
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
         can_access_inventory = 'can_access_inventory' in request.POST
+        can_manage_inventory = 'can_manage_inventory' in request.POST
         can_access_movements = 'can_access_movements' in request.POST
         can_access_users = 'can_access_users' in request.POST
         can_access_reports = 'can_access_reports' in request.POST
@@ -475,6 +487,7 @@ def create_template(request):
         base_context = {
             'name': name,
             'can_access_inventory': can_access_inventory,
+            'can_manage_inventory': can_manage_inventory,
             'can_access_movements': can_access_movements,
             'can_access_users': can_access_users,
             'can_access_reports': can_access_reports,
@@ -486,6 +499,9 @@ def create_template(request):
             errors.append("El nombre de la plantilla es obligatorio.")
         if name and GroupTemplate.objects.filter(name=name).exists():
             errors.append("Ya existe una plantilla con ese nombre.")
+        # Administrar sin poder ver no tiene sentido (ver models.GroupTemplate).
+        if can_manage_inventory and not can_access_inventory:
+            errors.append("Administrar inventario requiere también el permiso de verlo.")
 
         if errors:
             messages.error(request, errors[0])
@@ -494,6 +510,7 @@ def create_template(request):
         GroupTemplate.objects.create(
             name=name,
             can_access_inventory=can_access_inventory,
+            can_manage_inventory=can_manage_inventory,
             can_access_movements=can_access_movements,
             can_access_users=can_access_users,
             can_access_reports=can_access_reports,
@@ -517,13 +534,15 @@ def update_template(request, template_id):
     # no distingue entre valores recién cargados de la BD (GET) y los que el admin ya escribió (POST con error).
     context = {
         'template': template, 'name': template.name,
-        'can_access_inventory': template.can_access_inventory, 'can_access_movements': template.can_access_movements,
+        'can_access_inventory': template.can_access_inventory, 'can_manage_inventory': template.can_manage_inventory,
+        'can_access_movements': template.can_access_movements,
         'can_access_users': template.can_access_users, 'can_access_reports': template.can_access_reports,
     }
 
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
         can_access_inventory = 'can_access_inventory' in request.POST
+        can_manage_inventory = 'can_manage_inventory' in request.POST
         can_access_movements = 'can_access_movements' in request.POST
         can_access_users = 'can_access_users' in request.POST
         can_access_reports = 'can_access_reports' in request.POST
@@ -531,7 +550,8 @@ def update_template(request, template_id):
         # Se re-renderiza el form conservando lo que el admin ya había escrito, si hay que volver a mostrarlo.
         submitted_context = {
             **context, 'name': name,
-            'can_access_inventory': can_access_inventory, 'can_access_movements': can_access_movements,
+            'can_access_inventory': can_access_inventory, 'can_manage_inventory': can_manage_inventory,
+            'can_access_movements': can_access_movements,
             'can_access_users': can_access_users, 'can_access_reports': can_access_reports,
         }
 
@@ -542,6 +562,8 @@ def update_template(request, template_id):
         # exclude(id=template.id): que la propia plantilla no cuente como "duplicada" de sí misma.
         if GroupTemplate.objects.filter(name=name).exclude(id=template.id).exists():
             errors.append("Ya existe una plantilla con ese nombre.")
+        if can_manage_inventory and not can_access_inventory:
+            errors.append("Administrar inventario requiere también el permiso de verlo.")
 
         if errors:
             messages.error(request, errors[0])
@@ -550,6 +572,7 @@ def update_template(request, template_id):
         try:
             template.name = name
             template.can_access_inventory = can_access_inventory
+            template.can_manage_inventory = can_manage_inventory
             template.can_access_movements = can_access_movements
             template.can_access_users = can_access_users
             template.can_access_reports = can_access_reports

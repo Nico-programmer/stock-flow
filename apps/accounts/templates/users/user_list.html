@@ -3,6 +3,7 @@
 
 {% block title %}{% if request.user.is_platform_admin %}Gestión de usuarios{% else %}Gestión de empleados{% endif %}{% endblock %}
 {% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/products.css' %}">{% endblock %}
+{% block messages %}{% endblock %}
 
 {% block content %}
 <div class="page-header">
@@ -13,6 +14,31 @@
     </div>
     <a href="{% url "account:create" %}" class="btn btn-brand"><i class="fa-solid fa-plus"></i> Crear {% if request.user.is_platform_admin %}usuario{% else %}empleado{% endif %}</a>
 </div>
+
+{% if messages %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const djangoMessages = [
+                {% for message in messages %}
+                    { text: "{{ message|escapejs }}", tag: "{{ message.tags|default:'info'|escapejs }}" },
+                {% endfor %}
+            ];
+
+            djangoMessages.forEach(function (msg) {
+                let icon = 'info';
+                if (msg.tag.includes('danger')) icon = 'error';
+                else if (msg.tag.includes('success')) icon = 'success';
+                else if (msg.tag.includes('warning')) icon = 'warning';
+
+                Swal.fire({
+                    icon: icon,
+                    text: msg.text,
+                    confirmButtonColor: '#1657D6',
+                });
+            });
+        });
+    </script>
+{% endif %}
 
 <div class="card-surface p-3 p-md-4">
     <div class="table-responsive">
@@ -51,14 +77,14 @@
                                 <a href="{% url 'account:update' user.id %}" class="btn btn-outline-brand btn-sm" title="Actualizar">
                                     <i class="fa-solid fa-pen"></i>
                                 </a>
-                                <form method="POST" action="{% url 'account:deactivate' user.id %}" onsubmit="return confirm('¿Seguro que deseas desactivar a este usuario?');" style="display:inline;">
+                                <form method="POST" action="{% url 'account:deactivate' user.id %}" class="js-confirm-submit" data-confirm-title="¿Desactivar usuario?" data-confirm-text="{{ user.full_name }} dejará de poder iniciar sesión." data-confirm-button="Sí, desactivar" style="display:inline;">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-outline-brand btn-sm" title="Desactivar">
                                         <i class="fa-solid fa-trash"></i>
                                     </button>
                                 </form>
                             {% else %}
-                                <form method="POST" action="{% url 'account:activate' user.id %}" onsubmit="return confirm('¿Deseas reactivar a este usuario?');" style="display:inline;">
+                                <form method="POST" action="{% url 'account:activate' user.id %}" class="js-confirm-submit" data-confirm-icon="question" data-confirm-title="¿Reactivar usuario?" data-confirm-text="{{ user.full_name }} podrá volver a iniciar sesión." data-confirm-button="Sí, reactivar" style="display:inline;">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-outline-brand btn-sm" title="Reactivar">
                                         <i class="fa-solid fa-rotate-left"></i>

@@ -21,12 +21,28 @@ def platform_admin_required(view_func):
 
 
 def inventory_access_required(view_func):
-    """Deja pasar al admin de plataforma (soporte, ve cualquier empresa) o a un usuario de
-    negocio cuyo grupo tenga can_access_inventory. Va siempre debajo de @login_required."""
+    """Deja VER el inventario (catálogo/detalle de productos): admin de plataforma (soporte),
+    o un usuario de negocio cuyo grupo tenga can_access_inventory O can_manage_inventory (quien
+    puede administrar el catálogo obviamente también puede verlo). Va debajo de @login_required."""
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         user = request.user
-        has_access = user.is_platform_admin or (user.group_id and user.group.can_access_inventory)
+        has_access = user.is_platform_admin or (user.group_id and (user.group.can_access_inventory or user.group.can_manage_inventory))
+        if not has_access:
+            messages.error(request, "No tienes permiso para acceder a esta sección.")
+            return redirect('dashboard')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+def inventory_manage_required(view_func):
+    """Deja crear/editar/desactivar productos: admin de plataforma, o un usuario de negocio cuyo
+    grupo tenga can_manage_inventory (ver inventario NO alcanza, es a propósito un permiso aparte:
+    ver catálogo != poder tocarlo). Va siempre debajo de @login_required."""
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        user = request.user
+        has_access = user.is_platform_admin or (user.group_id and user.group.can_manage_inventory)
         if not has_access:
             messages.error(request, "No tienes permiso para acceder a esta sección.")
             return redirect('dashboard')

@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% load static inventory_extras %}
+{% load static %}
 
 {% block title %}Crear producto{% endblock %}
 {% block page_css %}
@@ -109,25 +109,6 @@
                         placeholder="Mínimo 5" value="{{ min_stock|default:'' }}">
                 </div>
             </div>
-        </div>
-
-        <div class="card-surface form-card mb-3">
-            <h6 class="form-section-title">Stock inicial</h6>
-
-            {% if branches %}
-                <div class="row g-2">
-                    {% for b in branches %}
-                        <div class="col-md-6">
-                            <label for="stock_{{ b.id }}" class="form-label">{{ b.name }}</label>
-                            <input type="number" id="stock_{{ b.id }}" name="stock_{{ b.id }}" class="form-control" step="1" min="0"
-                                placeholder="0" value="{{ stock_by_branch|get_item:b.id|default:'' }}">
-                        </div>
-                    {% endfor %}
-                </div>
-                <div class="small text-muted-soft mt-2">Podés dejarlo en 0 y cargar existencia después con un movimiento.</div>
-            {% else %}
-                <div class="small text-muted-soft">Esta empresa no tiene sucursales activas todavía.</div>
-            {% endif %}
         </div>
 
         <div class="form-actions">

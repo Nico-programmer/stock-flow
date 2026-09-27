@@ -41,7 +41,10 @@ class GroupTemplate(models.Model):
     """
     name = models.CharField(max_length=100, unique=True, verbose_name="Nombre de la plantilla")
 
-    can_access_inventory = models.BooleanField(default=False, verbose_name="Inventario")
+    can_access_inventory = models.BooleanField(default=False, verbose_name="Inventario (ver productos)")
+    # Separado de can_access_inventory: ver el catálogo no implica poder crearlo/editarlo/darlo de
+    # baja. El stock en sí nunca se toca desde el producto, solo con un Movement (ver ese modelo).
+    can_manage_inventory = models.BooleanField(default=False, verbose_name="Administrar inventario (crear/editar productos)")
     can_access_movements = models.BooleanField(default=False, verbose_name="Movimientos (entradas y salidas)")
     can_access_users = models.BooleanField(default=False, verbose_name="Usuarios")
     can_access_reports = models.BooleanField(default=False, verbose_name="Reportes")
@@ -79,6 +82,10 @@ class Group(models.Model):
     @property
     def can_access_inventory(self):
         return self.template.can_access_inventory
+
+    @property
+    def can_manage_inventory(self):
+        return self.template.can_manage_inventory
 
     @property
     def can_access_movements(self):

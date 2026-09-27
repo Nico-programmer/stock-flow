@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% load static inventory_extras %}
+{% load static %}
 
 {% block title %}{{ product.name }}{% endblock %}
 {% block page_css %}
@@ -16,7 +16,9 @@
             </a>
             <div>
                 <h1 class="mb-0">{{ product.name }}</h1>
-                <p>Actualiza los datos del producto.</p>
+                <p>
+                    Actualiza los datos del producto. El stock no se edita acá — se ve en <a href="{% url 'inventory:product_detail' product.id %}">el detalle</a>{% if request.user.is_platform_admin or request.user.group.can_access_movements %} y se cambia con un <a href="{% if request.user.is_platform_admin %}{% url 'inventory:movement_create' product.company.id %}{% else %}{% url 'inventory:movement_create' %}{% endif %}">movimiento</a>{% endif %}.
+                </p>
             </div>
         </div>
     </div>
@@ -108,25 +110,6 @@
                         placeholder="Mínimo 5" value="{{ min_stock|default:product.min_stock }}">
                 </div>
             </div>
-        </div>
-
-        <div class="card-surface form-card mb-3">
-            <h6 class="form-section-title">Existencia por sucursal</h6>
-
-            {% if branches %}
-                <div class="row g-2">
-                    {% for b in branches %}
-                        <div class="col-md-6">
-                            <label for="stock_{{ b.id }}" class="form-label">{{ b.name }}</label>
-                            <input type="number" id="stock_{{ b.id }}" name="stock_{{ b.id }}" class="form-control" step="1" min="0"
-                                placeholder="0" value="{{ stock_by_branch|get_item:b.id }}">
-                        </div>
-                    {% endfor %}
-                </div>
-                <div class="small text-muted-soft mt-2">Si la sucursal es nueva o no tenía existencia cargada, queda en 0 hasta que la edites.</div>
-            {% else %}
-                <div class="small text-muted-soft">Esta empresa no tiene sucursales activas todavía.</div>
-            {% endif %}
         </div>
 
         <div class="form-actions">

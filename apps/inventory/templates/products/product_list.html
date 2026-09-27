@@ -11,9 +11,11 @@
         <h1>Productos</h1>
         <p>Catálogo de productos de la empresa.</p>
     </div>
-    <a href="{% if request.user.is_platform_admin %}{% url "inventory:product_create" company.id %}{% else %}{% url "inventory:product_create" %}{% endif %}" class="btn btn-brand">
-        <i class="fa-solid fa-plus"></i> Crear producto
-    </a>
+    {% if request.user.is_platform_admin or request.user.group.can_manage_inventory %}
+        <a href="{% if request.user.is_platform_admin %}{% url "inventory:product_create" company.id %}{% else %}{% url "inventory:product_create" %}{% endif %}" class="btn btn-brand">
+            <i class="fa-solid fa-plus"></i> Crear producto
+        </a>
+    {% endif %}
 </div>
 
 <div class="card-surface p-3 p-md-4">
@@ -56,23 +58,25 @@
                             <a href="{% url 'inventory:product_detail' product.id %}" class="btn btn-outline-brand btn-sm" title="Ver">
                                 <i class="fa-solid fa-eye"></i>
                             </a>
-                            <a href="{% url 'inventory:product_update' product.id %}" class="btn btn-outline-brand btn-sm" title="Actualizar">
-                                <i class="fa-solid fa-pen"></i>
-                            </a>
-                            {% if product.is_active %}
-                                <form method="POST" action="{% url 'inventory:product_deactivate' product.id %}" onsubmit="return confirm('¿Seguro que deseas desactivar este producto?');" style="display:inline;">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-outline-brand btn-sm" title="Desactivar">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
-                                </form>
-                            {% else %}
-                                <form method="POST" action="{% url 'inventory:product_activate' product.id %}" onsubmit="return confirm('¿Deseas reactivar este producto?');" style="display:inline;">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-outline-brand btn-sm" title="Reactivar">
-                                        <i class="fa-solid fa-rotate-left"></i>
-                                    </button>
-                                </form>
+                            {% if request.user.is_platform_admin or request.user.group.can_manage_inventory %}
+                                <a href="{% url 'inventory:product_update' product.id %}" class="btn btn-outline-brand btn-sm" title="Actualizar">
+                                    <i class="fa-solid fa-pen"></i>
+                                </a>
+                                {% if product.is_active %}
+                                    <form method="POST" action="{% url 'inventory:product_deactivate' product.id %}" class="js-confirm-submit" data-confirm-title="¿Desactivar producto?" data-confirm-text="{{ product.name }} dejará de aparecer disponible para movimientos." data-confirm-button="Sí, desactivar" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-brand btn-sm" title="Desactivar">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <form method="POST" action="{% url 'inventory:product_activate' product.id %}" class="js-confirm-submit" data-confirm-icon="question" data-confirm-title="¿Reactivar producto?" data-confirm-text="{{ product.name }} volverá a estar disponible." data-confirm-button="Sí, reactivar" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-brand btn-sm" title="Reactivar">
+                                            <i class="fa-solid fa-rotate-left"></i>
+                                        </button>
+                                    </form>
+                                {% endif %}
                             {% endif %}
                         </td>
                     </tr>

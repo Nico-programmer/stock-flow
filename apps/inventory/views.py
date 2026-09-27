@@ -10,7 +10,7 @@ from django.db.models.functions import Coalesce
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 
-from apps.accounts.decorators import platform_admin_required, inventory_access_required, movements_access_required
+from apps.accounts.decorators import platform_admin_required, inventory_access_required, inventory_manage_required, movements_access_required
 from apps.companies.models import Company, Branch
 from .models import Category, Product, Stock, Movement
 
@@ -177,7 +177,7 @@ def product_detail(request, product_id):
     })
 
 @login_required
-@inventory_access_required
+@inventory_manage_required
 def create_product(request, company_id=None):
     company = _resolve_company(request, company_id)
     if company is None:
@@ -191,11 +191,6 @@ def create_product(request, company_id=None):
     # El front usa esto para armar un SKU que no choque con uno ya usado por esta empresa
     # (ver static/js/products/product_sku.script.js), sin tener que ir preguntándole al server.
     existing_skus = list(Product.objects.filter(company=company).values_list('sku', flat=True))
-    # Se pide la existencia inicial por sucursal en el mismo form: el usuario pidió no tener
-    # que crear el producto y después ir a otra pantalla aparte a cargarle el stock.
-    # _allowed_branches: si tiene una sucursal asignada, solo puede cargar stock ahí, no en otras.
-    branches_qs = _allowed_branches(request, company)
-    branch_names = {b.id: b.name for b in branches_qs}
 
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
@@ -205,17 +200,13 @@ def create_product(request, company_id=None):
         cost_price_raw = request.POST.get("cost_price", "").strip()
         sale_price_raw = request.POST.get("sale_price", "").strip()
         min_stock_raw = request.POST.get("min_stock", "").strip()
-        # Una cantidad por sucursal, en paralelo a branches_qs (input name="stock_<branch.id>").
-        stock_raw_by_branch = {b.id: request.POST.get(f"stock_{b.id}", "").strip() for b in branches_qs}
 
         base_context = {
             'company': company,
             'categories': categories_qs,
             'existing_skus': existing_skus,
-            'branches': branches_qs,
             'name': name, 'sku': sku, 'unit': unit, 'selected_category': category_id,
             'cost_price': cost_price_raw, 'sale_price': sale_price_raw, 'min_stock': min_stock_raw,
-            'stock_by_branch': stock_raw_by_branch,
         }
 
         errors = []
@@ -265,17 +256,6 @@ def create_product(request, company_id=None):
         else:
             min_stock = int(min_stock_raw)
 
-        # Vacío = 0 (sucursal arranca sin existencia); si trae algo, tiene que ser un entero >= 0.
-        stock_by_branch = {}
-        for branch_id, raw in stock_raw_by_branch.items():
-            if not raw:
-                stock_by_branch[branch_id] = 0
-            elif raw.isdigit():
-                stock_by_branch[branch_id] = int(raw)
-            else:
-                errors.append("La cantidad inicial de cada sucursal debe ser un número entero.")
-                break
-
         if errors:
             messages.error(request, errors[0])
             return render(request, 'products/create_product.html', base_context)
@@ -283,47 +263,37 @@ def create_product(request, company_id=None):
         category_obj = get_object_or_404(Category, id=category_id)
 
         try:
-            with transaction.atomic():
-                product = Product(
-                    company=company, category=category_obj,
-                    name=name, sku=sku, unit=unit,
-                    cost_price=cost_price, sale_price=sale_price, min_stock=min_stock,
-                )
-                product.full_clean()
-                product.save()
-
-                Stock.objects.bulk_create([
-                    Stock(product=product, branch_id=branch_id, quantity=quantity)
-                    for branch_id, quantity in stock_by_branch.items()
-                ])
+            product = Product(
+                company=company, category=category_obj,
+                name=name, sku=sku, unit=unit,
+                cost_price=cost_price, sale_price=sale_price, min_stock=min_stock,
+            )
+            product.full_clean()
+            product.save()
         except (IntegrityError, ValidationError):
             messages.error(request, "Ocurrió un error al crear el producto. Inténtalo de nuevo.")
             return render(request, 'products/create_product.html', base_context)
 
         # Éxito: NO se hace redirect() directo. Se re-renderiza el form con `redirect_url`
         # para que el template muestre el SweetAlert y navegue recién al cerrarlo.
-        messages.success(request, f"Producto {name} creado correctamente.")
-
-        # Aviso aparte (no bloquea el guardado) si alguna sucursal quedó en o por debajo del mínimo.
-        low_branches = [branch_names[bid] for bid, qty in stock_by_branch.items() if qty <= min_stock]
-        if low_branches:
-            messages.warning(request, f"Quedó con stock bajo en: {', '.join(low_branches)}.")
+        # El stock arranca en 0 en todas las sucursales: se carga después con un Movement
+        # (así todo cambio de stock queda registrado, en vez de poder pisarse desde el producto).
+        messages.success(request, f"Producto {name} creado correctamente. Cargá su stock con un movimiento.")
 
         return render(request, 'products/create_product.html', {
             'company': company,
             'categories': categories_qs,
             'existing_skus': existing_skus + [sku],
-            'branches': branches_qs,
             'redirect_url': _product_list_url(request, company),
         })
 
     # GET: form vacío.
     return render(request, 'products/create_product.html', {
-        'company': company, 'categories': categories_qs, 'existing_skus': existing_skus, 'branches': branches_qs,
+        'company': company, 'categories': categories_qs, 'existing_skus': existing_skus,
     })
 
 @login_required
-@inventory_access_required
+@inventory_manage_required
 def update_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
 
@@ -332,15 +302,7 @@ def update_product(request, product_id):
         return redirect('dashboard')
 
     categories_qs = Category.objects.order_by('name')
-    # Todas las sucursales activas (o solo la suya, ver _allowed_branches), no solo las que ya
-    # tienen Stock: cubre productos creados antes de que la sucursal existiera, o sin stock inicial.
-    branches_qs = _allowed_branches(request, product.company)
-    branch_names = {b.id: b.name for b in branches_qs}
-    current_stock_by_branch = dict(Stock.objects.filter(product=product).values_list('branch_id', 'quantity'))
-    context = {
-        'product': product, 'categories': categories_qs, 'branches': branches_qs,
-        'stock_by_branch': {b.id: current_stock_by_branch.get(b.id, 0) for b in branches_qs},
-    }
+    context = {'product': product, 'categories': categories_qs}
 
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
@@ -350,14 +312,12 @@ def update_product(request, product_id):
         cost_price_raw = request.POST.get("cost_price", "").strip()
         sale_price_raw = request.POST.get("sale_price", "").strip()
         min_stock_raw = request.POST.get("min_stock", "").strip()
-        stock_raw_by_branch = {b.id: request.POST.get(f"stock_{b.id}", "").strip() for b in branches_qs}
 
         # Se re-renderiza el form conservando lo que ya se había escrito, si hay que volver a mostrarlo.
         submitted_context = {
             **context,
             'name': name, 'sku': sku, 'unit': unit, 'selected_category': category_id,
             'cost_price': cost_price_raw, 'sale_price': sale_price_raw, 'min_stock': min_stock_raw,
-            'stock_by_branch': stock_raw_by_branch,
         }
 
         errors = []
@@ -408,17 +368,6 @@ def update_product(request, product_id):
         else:
             min_stock = int(min_stock_raw)
 
-        # Vacío = 0; si trae algo, tiene que ser un entero >= 0.
-        stock_by_branch = {}
-        for branch_id, raw in stock_raw_by_branch.items():
-            if not raw:
-                stock_by_branch[branch_id] = 0
-            elif raw.isdigit():
-                stock_by_branch[branch_id] = int(raw)
-            else:
-                errors.append("La cantidad de cada sucursal debe ser un número entero.")
-                break
-
         if errors:
             messages.error(request, errors[0])
             return render(request, 'products/update_product.html', submitted_context)
@@ -426,23 +375,15 @@ def update_product(request, product_id):
         category_obj = get_object_or_404(Category, id=category_id)
 
         try:
-            with transaction.atomic():
-                product.name = name
-                product.sku = sku
-                product.unit = unit
-                product.category = category_obj
-                product.cost_price = cost_price
-                product.sale_price = sale_price
-                product.min_stock = min_stock
-                product.full_clean()
-                product.save()
-
-                # Por sucursal: si ya existe el Stock se actualiza, si no existe se crea
-                # (cubre sucursales que no tenían fila todavía, sean nuevas o de antes de cargar stock).
-                for branch_id, quantity in stock_by_branch.items():
-                    Stock.objects.update_or_create(
-                        product=product, branch_id=branch_id, defaults={'quantity': quantity},
-                    )
+            product.name = name
+            product.sku = sku
+            product.unit = unit
+            product.category = category_obj
+            product.cost_price = cost_price
+            product.sale_price = sale_price
+            product.min_stock = min_stock
+            product.full_clean()
+            product.save()
         except (IntegrityError, ValidationError):
             messages.error(request, "Ocurrió un error al actualizar el producto. Inténtalo de nuevo.")
             return render(request, "products/update_product.html", submitted_context)
@@ -450,11 +391,6 @@ def update_product(request, product_id):
         # Éxito: NO se hace redirect() directo. Se re-renderiza el form con `redirect_url`
         # para que el template muestre el SweetAlert y navegue recién al cerrarlo.
         messages.success(request, f"El producto {name} fue editado exitosamente.")
-
-        # Aviso aparte (no bloquea el guardado) si alguna sucursal quedó en o por debajo del mínimo.
-        low_branches = [branch_names[bid] for bid, qty in stock_by_branch.items() if qty <= min_stock]
-        if low_branches:
-            messages.warning(request, f"Quedó con stock bajo en: {', '.join(low_branches)}.")
 
         submitted_context['redirect_url'] = _product_list_url(request, product.company)
         return render(request, 'products/update_product.html', submitted_context)
@@ -465,7 +401,7 @@ def update_product(request, product_id):
 # que forman el historial de inventario.
 @login_required
 @require_POST
-@inventory_access_required
+@inventory_manage_required
 def deactivate_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
     if not request.user.is_platform_admin and product.company_id != request.user.company_id:
@@ -473,11 +409,12 @@ def deactivate_product(request, product_id):
         return redirect('dashboard')
     product.is_active = False
     product.save()
+    messages.success(request, f"{product.name} fue desactivado correctamente.")
     return redirect(_product_list_url(request, product.company))
 
 @login_required
 @require_POST
-@inventory_access_required
+@inventory_manage_required
 def activate_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
     if not request.user.is_platform_admin and product.company_id != request.user.company_id:
@@ -485,6 +422,7 @@ def activate_product(request, product_id):
         return redirect('dashboard')
     product.is_active = True
     product.save()
+    messages.success(request, f"{product.name} fue reactivado correctamente.")
     return redirect(_product_list_url(request, product.company))
 
 """------------------------------------------------------------------ Movement Views ------------------------------------------------------------------"""

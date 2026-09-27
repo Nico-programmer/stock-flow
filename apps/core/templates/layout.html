@@ -51,7 +51,32 @@
             {% include "includes/topbar.html" %}
 
             <main class="app-content">
-                {% block messages %}{% include "includes/messages.html" %}{% endblock %}
+                {% block messages %}
+                    {% if messages %}
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function () {
+                                const djangoMessages = [
+                                    {% for message in messages %}
+                                        { text: "{{ message|escapejs }}", tag: "{{ message.tags|default:'info'|escapejs }}" },
+                                    {% endfor %}
+                                ];
+
+                                djangoMessages.forEach(function (msg) {
+                                    let icon = 'info';
+                                    if (msg.tag.includes('danger')) icon = 'error';
+                                    else if (msg.tag.includes('success')) icon = 'success';
+                                    else if (msg.tag.includes('warning')) icon = 'warning';
+
+                                    Swal.fire({
+                                        icon: icon,
+                                        text: msg.text,
+                                        confirmButtonColor: '#1657D6',
+                                    });
+                                });
+                            });
+                        </script>
+                    {% endif %}
+                {% endblock %}
                 {% block content %}{% endblock %}
             </main>
         </div>
@@ -67,6 +92,7 @@
     <script src="https://cdn.datatables.net/2.1.8/js/dataTables.bootstrap5.min.js"></script>
 
     <script src="{% static 'js/sidebar.js' %}"></script>
+    <script src="{% static 'js/components/confirm-submit.script.js' %}"></script>
     <script src="{% static 'js/main.js' %}"></script>
     <script src="{% static 'js/datatables-init.js' %}"></script>
     {% block extra_js %}{% endblock %}
