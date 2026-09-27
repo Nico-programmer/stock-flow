@@ -16,6 +16,9 @@
                 <a href="{% url 'inventory:product_list' company.id %}" class="btn btn-outline-brand">
                     <i class="fa-solid fa-boxes-stacked"></i> Ver inventario
                 </a>
+                <a href="{% url 'inventory:movement_list' company.id %}" class="btn btn-outline-brand">
+                    <i class="fa-solid fa-right-left"></i> Ver movimientos
+                </a>
                 <a href="{% url 'company:update' company.id %}" class="btn btn-outline-brand">
                     <i class="fa-solid fa-pen"></i> Editar
                 </a>

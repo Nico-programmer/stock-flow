@@ -76,6 +76,13 @@ class Movement(models.Model):
         ('devolucion', 'Devolución'),
     ]
 
+    # Qué motivos tienen sentido según si el movimiento suma o resta stock (no aplica, por
+    # ejemplo, registrar una "venta" como Entrada). "ajuste" vale para los dos lados.
+    REASONS_BY_TYPE = {
+        IN: ['compra', 'devolucion', 'ajuste'],
+        OUT: ['venta', 'merma', 'ajuste'],
+    }
+
     company = models.ForeignKey('companies.Company', on_delete=models.CASCADE, related_name='movements', verbose_name="Empresa")
     branch = models.ForeignKey('companies.Branch', on_delete=models.CASCADE, related_name='movements', verbose_name="Sucursal")
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='movements', verbose_name="Producto")
@@ -92,6 +99,8 @@ class Movement(models.Model):
     def clean(self):
         if self.quantity is not None and self.quantity <= 0:
             raise ValidationError("La cantidad debe ser mayor a cero.")
+        if self.movement_type and self.reason and self.reason not in self.REASONS_BY_TYPE.get(self.movement_type, []):
+            raise ValidationError("Ese motivo no aplica para este tipo de movimiento.")
 
     def __str__(self):
         return f'{self.get_movement_type_display()} · {self.product.name} ({self.quantity})'

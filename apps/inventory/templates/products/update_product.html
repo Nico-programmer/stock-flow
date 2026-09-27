@@ -75,7 +75,7 @@
 
                 <div>
                     <label for="category" class="form-label">Categoría</label>
-                    <select name="category" id="category" class="form-select" required>
+                    <select name="category" id="category" class="form-select js-select-search" required>
                         <option value="" disabled {% if not selected_category and not product.category_id %}selected{% endif %}>Selecciona una categoría</option>
                         {% for c in categories %}
                             <option value="{{ c.id }}" {% if c.id|stringformat:"s" == selected_category|default:product.category_id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
@@ -138,5 +138,5 @@
     </form>
 
     <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
-    <script src="{% static 'js/products/category_select.script.js' %}"></script>
+    <script src="{% static 'js/components/searchable-select.script.js' %}"></script>
 {% endblock %}

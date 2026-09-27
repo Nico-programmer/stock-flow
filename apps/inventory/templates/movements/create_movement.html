@@ -1,0 +1,202 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Registrar movimiento{% endblock %}
+{% block page_css %}
+    <link rel="stylesheet" href="{% static 'css/pages/forms.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+{% endblock %}
+{% block messages %}{% endblock %}
+
+{% block content %}
+    <div class="page-header">
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% if request.user.is_platform_admin %}{% url 'inventory:movement_list' company.id %}{% else %}{% url 'inventory:movement_list' %}{% endif %}" class="btn btn-outline-brand btn-sm">
+                <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            <div>
+                <h1 class="mb-0">Registrar movimiento</h1>
+                <p>Entrada o salida de stock para un producto en una sucursal.</p>
+            </div>
+        </div>
+    </div>
+
+    {% if messages %}
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const djangoMessages = [
+                    {% for message in messages %}
+                        { text: "{{ message|escapejs }}", tag: "{{ message.tags|default:'info'|escapejs }}" },
+                    {% endfor %}
+                ];
+
+                const redirectUrl = "{{ redirect_url|default:''|escapejs }}";
+
+                djangoMessages.forEach(function (msg, index) {
+                    let icon = 'info';
+                    if (msg.tag.includes('danger')) icon = 'error';
+                    else if (msg.tag.includes('success')) icon = 'success';
+                    else if (msg.tag.includes('warning')) icon = 'warning';
+
+                    Swal.fire({
+                        icon: icon,
+                        text: msg.text,
+                        confirmButtonColor: '#1657D6',
+                        allowEscapeKey: false,
+                        allowOutsideClick: false,
+                    }).then(function () {
+                        if (index === djangoMessages.length - 1 && redirectUrl) {
+                            window.location.href = redirectUrl;
+                        }
+                    });
+                });
+            });
+        </script>
+    {% endif %}
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <form method="POST">
+                {% csrf_token %}
+
+                <div class="card-surface form-card mb-3">
+                    <h6 class="form-section-title">Movimiento</h6>
+
+                    <div class="form-two-col">
+                        <div>
+                            <label for="branch" class="form-label">Sucursal</label>
+                            <select name="branch" id="branch" class="form-select" required>
+                                <option value="" disabled {% if not selected_branch %}selected{% endif %}>Selecciona la sucursal</option>
+                                {% for b in branches %}
+                                    <option value="{{ b.id }}" {% if b.id|stringformat:"s" == selected_branch %}selected{% endif %}>{{ b.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="movement_type" class="form-label">Tipo</label>
+                            <select name="movement_type" id="movement_type" class="form-select" required>
+                                <option value="" disabled {% if not selected_movement_type %}selected{% endif %}>Selecciona el tipo</option>
+                                <option value="IN" {% if selected_movement_type == "IN" %}selected{% endif %}>Entrada</option>
+                                <option value="OUT" {% if selected_movement_type == "OUT" %}selected{% endif %}>Salida</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="reason" class="form-label">Motivo</label>
+                            <select name="reason" id="reason" class="form-select" required>
+                                <option value="" disabled {% if not selected_reason %}selected{% endif %}>Selecciona el motivo</option>
+                                {# data-type: para qué movement_type tiene sentido cada motivo (ver Movement.REASONS_BY_TYPE en el modelo). #}
+                                <option value="compra" data-type="IN" {% if selected_reason == "compra" %}selected{% endif %}>Compra</option>
+                                <option value="devolucion" data-type="IN" {% if selected_reason == "devolucion" %}selected{% endif %}>Devolución</option>
+                                <option value="venta" data-type="OUT" {% if selected_reason == "venta" %}selected{% endif %}>Venta</option>
+                                <option value="merma" data-type="OUT" {% if selected_reason == "merma" %}selected{% endif %}>Merma</option>
+                                <option value="ajuste" data-type="IN OUT" {% if selected_reason == "ajuste" %}selected{% endif %}>Ajuste</option>
+                            </select>
+                            <div class="small text-muted-soft mt-1">Las opciones cambian según el tipo (entrada o salida).</div>
+                        </div>
+
+                        <div>
+                            <label for="note" class="form-label">Nota (opcional)</label>
+                            <input type="text" id="note" name="note" class="form-control" maxlength="250"
+                                placeholder="Ej. factura #123" value="{{ note|default:'' }}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-surface form-card mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="form-section-title mb-0">Productos</h6>
+                        <button type="button" id="add-product-row" class="btn btn-outline-brand btn-sm">
+                            <i class="fa-solid fa-plus me-1"></i> Agregar producto
+                        </button>
+                    </div>
+
+                    {% if not products %}
+                        <div class="small text-muted-soft">No hay productos activos todavía.</div>
+                    {% else %}
+                        <div id="product-rows-container">
+                            {% for row in product_rows %}
+                                <div class="row g-3 align-items-end mb-2 product-row">
+                                    <div class="col-md-7">
+                                        <label class="form-label">Producto</label>
+                                        <select name="product[]" class="form-select js-product-select">
+                                            <option value="" disabled {% if not row.product %}selected{% endif %}>Selecciona el producto</option>
+                                            {% for p in products %}
+                                                <option value="{{ p.id }}" {% if p.id|stringformat:"s" == row.product %}selected{% endif %}>{{ p.name }} ({{ p.sku }})</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Cantidad</label>
+                                        <input type="number" name="quantity[]" class="form-control" step="1" min="1"
+                                            placeholder="0" value="{{ row.quantity }}">
+                                    </div>
+                                    <div class="col-md-1 d-grid">
+                                        <button type="button" class="btn btn-outline-brand remove-product-row" title="Quitar">
+                                            <i class="fa-solid fa-xmark"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <template id="product-row-template">
+                            <div class="row g-3 align-items-end mb-2 product-row">
+                                <div class="col-md-7">
+                                    <label class="form-label">Producto</label>
+                                    <select name="product[]" class="form-select js-product-select">
+                                        <option value="" disabled selected>Selecciona el producto</option>
+                                        {% for p in products %}
+                                            <option value="{{ p.id }}">{{ p.name }} ({{ p.sku }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Cantidad</label>
+                                    <input type="number" name="quantity[]" class="form-control" step="1" min="1" placeholder="0">
+                                </div>
+                                <div class="col-md-1 d-grid">
+                                    <button type="button" class="btn btn-outline-brand remove-product-row" title="Quitar">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    {% endif %}
+                </div>
+
+                <div class="form-actions">
+                    <a href="{% if request.user.is_platform_admin %}{% url 'inventory:movement_list' company.id %}{% else %}{% url 'inventory:movement_list' %}{% endif %}" class="btn btn-outline-brand">Cancelar</a>
+                    <button type="submit" class="btn btn-brand">
+                        <i class="fa-solid fa-floppy-disk"></i> Registrar movimiento
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card-surface form-card mb-3">
+                <h6 class="form-section-title">¿Qué significa cada opción?</h6>
+
+                <p class="small text-muted-soft mb-2"><strong class="text-ink">Entrada</strong>: suma stock a la sucursal.</p>
+                <ul class="small text-muted-soft ps-3 mb-3">
+                    <li><strong class="text-ink">Compra</strong>: llegó mercadería nueva de un proveedor.</li>
+                    <li><strong class="text-ink">Devolución</strong>: un cliente devolvió el producto.</li>
+                </ul>
+
+                <p class="small text-muted-soft mb-2"><strong class="text-ink">Salida</strong>: resta stock de la sucursal.</p>
+                <ul class="small text-muted-soft ps-3 mb-3">
+                    <li><strong class="text-ink">Venta</strong>: se le vendió a un cliente.</li>
+                    <li><strong class="text-ink">Merma</strong>: se dañó, venció o se perdió (no fue una venta).</li>
+                </ul>
+
+                <p class="small text-muted-soft mb-0"><strong class="text-ink">Ajuste</strong>: corrección manual, para cuadrar el sistema con lo que hay físicamente en la sucursal (vale tanto para entrada como para salida).</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+    <script src="{% static 'js/movements/product_rows.script.js' %}"></script>
+    <script src="{% static 'js/movements/reason_filter.script.js' %}"></script>
+{% endblock %}

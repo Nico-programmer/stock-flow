@@ -32,3 +32,31 @@ def inventory_access_required(view_func):
             return redirect('dashboard')
         return view_func(request, *args, **kwargs)
     return wrapper
+
+
+def movements_access_required(view_func):
+    """Igual que inventory_access_required pero para can_access_movements (entradas/salidas)."""
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        user = request.user
+        has_access = user.is_platform_admin or (user.group_id and user.group.can_access_movements)
+        if not has_access:
+            messages.error(request, "No tienes permiso para acceder a esta sección.")
+            return redirect('dashboard')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+def users_access_required(view_func):
+    """Igual que inventory_access_required pero para can_access_users: deja pasar al admin de
+    plataforma (gestiona cualquier empresa) o a un usuario de negocio cuyo grupo tenga
+    can_access_users (gestiona los EMPLEADOS de su propia empresa, no de otras)."""
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        user = request.user
+        has_access = user.is_platform_admin or (user.group_id and user.group.can_access_users)
+        if not has_access:
+            messages.error(request, "No tienes permiso para acceder a esta sección.")
+            return redirect('dashboard')
+        return view_func(request, *args, **kwargs)
+    return wrapper

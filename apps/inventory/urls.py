@@ -22,4 +22,10 @@ urlpatterns = [
     path('update-product/<int:product_id>/', update_product, name="product_update"),
     path('deactivate-product/<int:product_id>/', deactivate_product, name="product_deactivate"),
     path('activate-product/<int:product_id>/', activate_product, name="product_activate"),
+
+    # Movement Views (sin company_id: usuario de negocio ve la suya / con company_id: soporte del admin)
+    path('movement-list/', movement_list, name="movement_list"),
+    path('movement-list/<int:company_id>/', movement_list, name="movement_list"),
+    path('create-movement/', create_movement, name="movement_create"),
+    path('create-movement/<int:company_id>/', create_movement, name="movement_create"),
 ]

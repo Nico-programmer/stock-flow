@@ -1,0 +1,55 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Movimientos{% endblock %}
+{% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/products.css' %}">{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <span class="section-label">{% if request.user.is_platform_admin %}{{ company.name }}{% else %}Inventario{% endif %}</span>
+        <h1>Movimientos</h1>
+        <p>Historial de entradas y salidas de stock.</p>
+    </div>
+    <a href="{% if request.user.is_platform_admin %}{% url "inventory:movement_create" company.id %}{% else %}{% url "inventory:movement_create" %}{% endif %}" class="btn btn-brand">
+        <i class="fa-solid fa-plus"></i> Registrar movimiento
+    </a>
+</div>
+
+<div class="card-surface p-3 p-md-4">
+    <div class="table-responsive">
+        <table class="table-app js-datatable">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Sucursal</th>
+                    <th class="text-center">Tipo</th>
+                    <th class="text-center">Cantidad</th>
+                    <th>Motivo</th>
+                    <th>Usuario</th>
+                    <th>Fecha</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in movements %}
+                    <tr>
+                        <td data-label="Producto" class="fw-semibold">{{ m.product.name }}</td>
+                        <td data-label="Sucursal">{{ m.branch.name }}</td>
+                        <td data-label="Tipo" class="text-center">
+                            {% if m.movement_type == 'IN' %}
+                                <span class="badge-stock ok">Entrada</span>
+                            {% else %}
+                                <span class="badge-stock out">Salida</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="Cantidad" class="text-center">{{ m.quantity }}</td>
+                        <td data-label="Motivo">{{ m.get_reason_display }}</td>
+                        <td data-label="Usuario">{{ m.user.full_name|default:"—" }}</td>
+                        <td data-label="Fecha">{{ m.created_at|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

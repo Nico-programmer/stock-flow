@@ -32,4 +32,5 @@ urlpatterns = [
 
     # Endpoint
     path('get-groups/<int:company_id>/', get_groups_by_company, name='get_groups_by_company'),
+    path('get-branches/<int:company_id>/', get_branches_by_company, name='get_branches_by_company'),
 ]

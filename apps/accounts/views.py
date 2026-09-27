@@ -4,7 +4,7 @@ from django.contrib.auth import authenticate, login, logout
 # Decorators
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
-from .decorators import platform_admin_required
+from .decorators import platform_admin_required, users_access_required
 from django.urls import reverse
 
 from django.contrib import messages
@@ -74,22 +74,26 @@ def logout_view(request):
 """------------------------------------------------------------------ Users View ------------------------------------------------------------------"""
 
 @login_required
-@platform_admin_required
+@users_access_required
 def userList_view(request):
-    # Lista de todos los usuarios, de todas las empresas. Los admin de plataforma van primero
-    # (-is_platform_admin: True antes que False). Busqueda/orden/paginacion: DataTables en el cliente.
-    users = (
-        User.objects
-        .select_related('company', 'group')
-        .order_by('-is_platform_admin', 'company__name', 'username')
-    )
+    # Admin de plataforma: todos los usuarios de todas las empresas (admin de plataforma primero).
+    # Usuario de negocio con can_access_users: SOLO los empleados de su propia empresa.
+    users = User.objects.select_related('company', 'group')
+    if request.user.is_platform_admin:
+        users = users.order_by('-is_platform_admin', 'company__name', 'username')
+    else:
+        users = users.filter(company_id=request.user.company_id).order_by('username')
     return render(request, "users/user_list.html", {'users': users})
 
 # Endpoint AJAX: lo llama el JS del form de usuarios al cambiar el <select> de empresa,
 # para repoblar el <select> de grupo con los grupos de esa empresa.
 @login_required
-@platform_admin_required
+@users_access_required
 def get_groups_by_company(request, company_id):
+    # Un usuario de negocio solo puede pedir los grupos de SU PROPIA empresa (nunca de otra).
+    if not request.user.is_platform_admin and company_id != request.user.company_id:
+        return JsonResponse([], safe=False)
+
     # 'name' es una property (delega a template.name), no un campo real: no se puede pedir
     # directo con .values(), hay que traer template__name y renombrarlo a mano.
     groups = Group.objects.filter(company_id=company_id).values(
@@ -109,16 +113,33 @@ def get_groups_by_company(request, company_id):
     } for g in groups]
     return JsonResponse(data, safe=False)
 
+# Endpoint AJAX: repuebla el <select> de sucursal al elegir/cargar la empresa (branch es opcional,
+# vacío = usuario "de empresa" que ve todas las sucursales, ver User.branch en el modelo).
 @login_required
-@platform_admin_required
-def create_user(request):
-    # Alta de usuario. El form elige Empresa -> Grupo en cascada (el grupo se puebla por AJAX).
+@users_access_required
+def get_branches_by_company(request, company_id):
+    if not request.user.is_platform_admin and company_id != request.user.company_id:
+        return JsonResponse([], safe=False)
 
-    companies_qs = Company.objects.filter(is_active=True)
+    branches = Branch.objects.filter(company_id=company_id, is_active=True).values('id', 'name')
+    return JsonResponse(list(branches), safe=False)
+
+@login_required
+@users_access_required
+def create_user(request):
+    # Alta de usuario. El form elige Empresa -> Grupo/Sucursal en cascada (se pueblan por AJAX).
+    # Admin de plataforma: elige cualquier empresa activa. Usuario de negocio (can_access_users):
+    # la empresa queda fija en la suya (nunca se lee del POST, así no hay forma de mandarla a mano).
+    is_admin = request.user.is_platform_admin
+    companies_qs = Company.objects.filter(is_active=True) if is_admin else Company.objects.filter(id=request.user.company_id, is_active=True)
+    # GroupTemplate es global (no por empresa): se muestra en el panel de ayuda para que quien da
+    # de alta sepa de un vistazo qué puede hacer cada grupo, sin tener que ir a mirarlo aparte.
+    templates_qs = GroupTemplate.objects.order_by('name')
 
     if request.method == "POST":
-        company_id = request.POST.get("company", "").strip()
+        company_id = request.POST.get("company", "").strip() if is_admin else str(request.user.company_id)
         group_id = request.POST.get("group", "").strip()
+        branch_id = request.POST.get("branch", "").strip()
         full_name = request.POST.get("full_name", "").strip()
         username = request.POST.get("username", "").strip()
         phone_number = request.POST.get("phone_number", "").strip()
@@ -128,11 +149,14 @@ def create_user(request):
         # Contexto para re-renderizar el form con lo ya cargado si hay errores de validación.
         base_context = {
             'companies': companies_qs,
+            'is_admin': is_admin,
+            'templates': templates_qs,
             'full_name': full_name,
             'username': username,
             'phone_number': phone_number,
             'selected_company': company_id,
             'selected_group': group_id,
+            'selected_branch': branch_id,
         }
 
         # Se acumulan TODOS los checks primero; recién después se toca la base de datos.
@@ -150,6 +174,11 @@ def create_user(request):
             errors.append("Las contraseñas no coinciden.")
         if username and User.objects.filter(username=username).exists():
             errors.append("Ese nombre de usuario ya está en uso.")
+        # Sin sucursal = usuario "de empresa" (ve todas). Eso solo lo puede dejar así el admin de
+        # plataforma, que es quien da de alta al dueño de la empresa; un usuario de negocio dando
+        # de alta a un empleado sí tiene que elegirle una sucursal puntual.
+        if not is_admin and not branch_id:
+            errors.append("Selecciona la sucursal del empleado.")
 
         if errors:
             messages.error(request, errors[0])   # se muestra solo el primer error
@@ -158,9 +187,13 @@ def create_user(request):
         try:
             with transaction.atomic():
                 company_obj = get_object_or_404(Company, id=company_id, is_active=True)
-                # El grupo es opcional: un usuario puede quedar "sin grupo" hasta que se le asigne uno.
+                # Grupo y sucursal son opcionales: un usuario puede quedar "sin grupo" hasta que se
+                # le asigne uno, y sin sucursal es un usuario "de empresa" (ve todas, ver User.branch).
                 group_obj = get_object_or_404(Group, id=group_id, company=company_obj) if group_id else None
+                branch_obj = get_object_or_404(Branch, id=branch_id, company=company_obj) if branch_id else None
 
+                # is_platform_admin NUNCA se lee del POST: esta vista jamás da de alta un admin
+                # de plataforma, ni aunque la llame un usuario de negocio con can_access_users.
                 user = User.objects.create_user(
                     username=username,
                     password=password,
@@ -168,6 +201,7 @@ def create_user(request):
                     phone_number=phone_number,
                     company=company_obj,
                     group=group_obj,
+                    branch=branch_obj,
                 )
         except (IntegrityError, ValidationError):
             # IntegrityError: choque de unique en BD. ValidationError: falla de full_clean().
@@ -177,29 +211,43 @@ def create_user(request):
         # Éxito: se re-renderiza con redirect_url para el SweetAlert (no redirect() directo).
         messages.success(request, f"Usuario {user.username} creado correctamente.")
         return render(request, 'users/create_users.html', {
-            'companies': companies_qs,
+            'companies': companies_qs, 'is_admin': is_admin, 'templates': templates_qs,
             'redirect_url': reverse('account:list'),
         })
 
     # GET: form vacío.
-    return render(request, 'users/create_users.html', {'companies': companies_qs})
+    return render(request, 'users/create_users.html', {
+        'companies': companies_qs, 'is_admin': is_admin, 'templates': templates_qs,
+    })
 
 @login_required
-@platform_admin_required
+@users_access_required
 def update_user(request, user_id):
-    # Edición de un usuario existente. Misma mecánica que create_user (empresa/grupo en cascada).
+    # Edición de un usuario existente. Misma mecánica que create_user (empresa/grupo/sucursal en cascada).
 
     employee = get_object_or_404(User, id=user_id)
-    companies_qs = Company.objects.filter(is_active=True)
+    is_admin = request.user.is_platform_admin
+
+    # Un usuario de negocio (can_access_users) solo puede editar empleados de SU PROPIA empresa,
+    # y nunca a un admin de plataforma (employee.company_id es None en ese caso, nunca calza).
+    if not is_admin and employee.company_id != request.user.company_id:
+        messages.error(request, "No tienes permiso para editar este usuario.")
+        return redirect('account:list')
+
+    companies_qs = Company.objects.filter(is_active=True) if is_admin else Company.objects.filter(id=request.user.company_id, is_active=True)
 
     context = {
         "employee": employee,
         "companies": companies_qs,
+        "is_admin": is_admin,
+        # GroupTemplate es global: se muestra en el panel de ayuda para saber qué puede hacer cada grupo.
+        "templates": GroupTemplate.objects.order_by('name'),
     }
 
     if request.method == "POST":
-        company_id = request.POST.get("company", "").strip()
+        company_id = request.POST.get("company", "").strip() if is_admin else str(request.user.company_id)
         group_id = request.POST.get("group", "").strip()
+        branch_id = request.POST.get("branch", "").strip()
         full_name = request.POST.get("full_name", "").strip()
         username = request.POST.get("username", "").strip()
         phone_number = request.POST.get("phone_number", "").strip()
@@ -208,7 +256,7 @@ def update_user(request, user_id):
         submitted_context = {
             **context,
             'full_name': full_name, 'username': username, 'phone_number': phone_number,
-            'selected_company': company_id, 'selected_group': group_id,
+            'selected_company': company_id, 'selected_group': group_id, 'selected_branch': branch_id,
         }
 
         errors = []
@@ -222,6 +270,10 @@ def update_user(request, user_id):
         # exclude(id=employee.id): que el propio usuario no cuente como "duplicado" de sí mismo.
         if User.objects.filter(username=username).exclude(id=employee.id).exists():
             errors.append("Ese nombre de usuario ya está en uso.")
+        # Mismo criterio que en create_user: un usuario de negocio no puede dejar a un empleado
+        # sin sucursal (eso solo lo decide el admin de plataforma para el dueño de la empresa).
+        if not is_admin and not branch_id:
+            errors.append("Selecciona la sucursal del empleado.")
 
         if errors:
             messages.error(request, errors[0])
@@ -231,12 +283,14 @@ def update_user(request, user_id):
             with transaction.atomic():
                 company_obj = get_object_or_404(Company, id=company_id, is_active=True)
                 group_obj = get_object_or_404(Group, id=group_id, company=company_obj) if group_id else None
+                branch_obj = get_object_or_404(Branch, id=branch_id, company=company_obj) if branch_id else None
 
                 employee.full_name = full_name
                 employee.username = username
                 employee.phone_number = phone_number
                 employee.company = company_obj
                 employee.group = group_obj
+                employee.branch = branch_obj
 
                 employee.full_clean()
                 employee.save()
@@ -253,11 +307,17 @@ def update_user(request, user_id):
 # Baja lógica de un usuario (is_active=False). @require_POST: solo por formulario con CSRF, nunca por link.
 @login_required
 @require_POST
-@platform_admin_required
+@users_access_required
 def deactivate_user(request, user_id):
     employee = get_object_or_404(User, id=user_id)
 
-    # El admin de plataforma no puede desactivarse a sí mismo (se quedaría afuera).
+    # Mismo límite que en update_user: un usuario de negocio no puede tocar cuentas de otra
+    # empresa ni un admin de plataforma (company_id None en ese caso, nunca calza).
+    if not request.user.is_platform_admin and employee.company_id != request.user.company_id:
+        messages.error(request, "No tienes permiso para editar este usuario.")
+        return redirect("account:list")
+
+    # Nadie puede desactivarse a sí mismo (se quedaría afuera).
     if employee.id == request.user.id:
         return redirect("account:list")
 
@@ -269,9 +329,14 @@ def deactivate_user(request, user_id):
 # Reactiva un usuario dado de baja.
 @login_required
 @require_POST
-@platform_admin_required
+@users_access_required
 def activate_user(request, user_id):
     employee = get_object_or_404(User, id=user_id)
+
+    if not request.user.is_platform_admin and employee.company_id != request.user.company_id:
+        messages.error(request, "No tienes permiso para editar este usuario.")
+        return redirect("account:list")
+
     employee.is_active = True
     employee.save()
 

@@ -68,15 +68,37 @@
                 <span class="nav-label">Mi empresa</span>
             </a>
 
-            {% if request.user.group.can_access_inventory %}
+            {% if request.user.group.can_access_users %}
+                <span class="sidebar-section-label">Personal</span>
+
+                <a href="{% url 'account:list' %}"
+                   class="nav-link-item{% if request.resolver_match.namespace == 'account' %} active{% endif %}"
+                   {% if request.resolver_match.namespace == 'account' %}aria-current="page"{% endif %}>
+                    <span class="nav-icon"><i class="fa-solid fa-users"></i></span>
+                    <span class="nav-label">Gestión de empleados</span>
+                </a>
+            {% endif %}
+
+            {% if request.user.group.can_access_inventory or request.user.group.can_access_movements %}
                 <span class="sidebar-section-label">Operación</span>
 
-                <a href="{% url 'inventory:product_list' %}"
-                   class="nav-link-item{% if request.resolver_match.namespace == 'inventory' %} active{% endif %}"
-                   {% if request.resolver_match.namespace == 'inventory' %}aria-current="page"{% endif %}>
-                    <span class="nav-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
-                    <span class="nav-label">Productos</span>
-                </a>
+                {% if request.user.group.can_access_inventory %}
+                    <a href="{% url 'inventory:product_list' %}"
+                       class="nav-link-item{% if 'product_' in request.resolver_match.url_name %} active{% endif %}"
+                       {% if 'product_' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
+                        <span class="nav-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
+                        <span class="nav-label">Productos</span>
+                    </a>
+                {% endif %}
+
+                {% if request.user.group.can_access_movements %}
+                    <a href="{% url 'inventory:movement_list' %}"
+                       class="nav-link-item{% if 'movement_' in request.resolver_match.url_name %} active{% endif %}"
+                       {% if 'movement_' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
+                        <span class="nav-icon"><i class="fa-solid fa-right-left"></i></span>
+                        <span class="nav-label">Movimientos</span>
+                    </a>
+                {% endif %}
             {% endif %}
         {% endif %}
 

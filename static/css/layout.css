@@ -127,6 +127,7 @@ a:hover { color: #fff; text-decoration: underline; }
 }
 
 .text-muted-soft { color: var(--ink-soft); }
+.text-ink { color: var(--ink); }
 
 /* Icono placeholder genérico: reserva 20px para no romper el layout */
 .icon-placeholder {

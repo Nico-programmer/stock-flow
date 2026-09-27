@@ -19,8 +19,10 @@ document.querySelectorAll('.toggle-password').forEach(function (button) {
 document.addEventListener('DOMContentLoaded', function () {
     const companySelect = document.getElementById('company')
     const groupSelect = document.getElementById('group')
+    const branchSelect = document.getElementById('branch')
 
     const currentGroupId = groupSelect.dataset.current || ''
+    const currentBranchId = branchSelect.dataset.current || ''
 
     function loadGroups(companyId, selectedGroupId) {
         groupSelect.innerHTML = '<option value="" selected>Cargando...</option>'
@@ -35,10 +37,10 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(groups => {
                 groupSelect.innerHTML = '<option value="">Sin grupo</option>'
 
-                // Si no venía un grupo ya elegido (alta nueva), se preselecciona el de mayor acceso:
-                // quien da de alta al usuario es el admin de plataforma, así que por defecto es
-                // el "dueño" de la empresa, no un empleado sin permisos.
-                const fallbackGroupId = !selectedGroupId
+                // Solo el admin de plataforma da de alta al usuario "dueño" de la empresa, por eso
+                // el fallback a full-access aplica únicamente ahí. Un usuario de negocio dando de
+                // alta a un empleado no debería arrancar en el grupo de mayor acceso por default.
+                const fallbackGroupId = (!selectedGroupId && isAdminCreator)
                     ? (groups.find(group => group.full_access) || {}).id
                     : null
 
@@ -59,11 +61,43 @@ document.addEventListener('DOMContentLoaded', function () {
             })
     }
 
+    function loadBranches(companyId, selectedBranchId) {
+        branchSelect.innerHTML = '<option value="" selected>Cargando...</option>'
+        branchSelect.disabled = true
+
+        if (!companyId) return
+
+        const url = branchesUrlTemplate.replace('0', companyId)
+
+        fetch(url)
+            .then(response => response.json())
+            .then(branches => {
+                branchSelect.innerHTML = '<option value="">Sin sucursal (ve todas)</option>'
+
+                branches.forEach(branch => {
+                    const option = document.createElement('option')
+                    option.value = branch.id
+                    option.textContent = branch.name
+                    if (String(branch.id) === String(selectedBranchId)) {
+                        option.selected = true
+                    }
+                    branchSelect.appendChild(option)
+                })
+
+                branchSelect.disabled = false
+            })
+            .catch(() => {
+                branchSelect.innerHTML = '<option value="">Error al cargar sucursales</option>'
+            })
+    }
+
     if (companySelect.value) {
         loadGroups(companySelect.value, currentGroupId)
+        loadBranches(companySelect.value, currentBranchId)
     }
 
     companySelect.addEventListener('change', function () {
         loadGroups(this.value, '')
+        loadBranches(this.value, '')
     })
 })

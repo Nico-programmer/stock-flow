@@ -5,14 +5,14 @@ from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import Sum, Exists, OuterRef, F
+from django.db.models import Sum, Exists, OuterRef, F, Q
 from django.db.models.functions import Coalesce
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 
-from apps.accounts.decorators import platform_admin_required, inventory_access_required
-from apps.companies.models import Company
-from .models import Category, Product, Stock
+from apps.accounts.decorators import platform_admin_required, inventory_access_required, movements_access_required
+from apps.companies.models import Company, Branch
+from .models import Category, Product, Stock, Movement
 
 """------------------------------------------------------------------ Category Views ------------------------------------------------------------------"""
 
@@ -123,6 +123,15 @@ def _product_list_url(request, company):
         return reverse('inventory:product_list', args=[company.id])
     return reverse('inventory:product_list')
 
+# Sucursales sobre las que puede operar quien hace el pedido: todas si es admin de plataforma
+# (soporte) o un usuario "de empresa" (User.branch=None); solo la suya si tiene una sucursal
+# asignada. Sin esto, un empleado de una sucursal podía ver/mover stock de las demás.
+def _allowed_branches(request, company):
+    branches_qs = company.branches.filter(is_active=True).order_by('name')
+    if not request.user.is_platform_admin and request.user.branch_id:
+        return branches_qs.filter(id=request.user.branch_id)
+    return branches_qs
+
 @login_required
 @inventory_access_required
 def product_list(request, company_id=None):
@@ -134,14 +143,17 @@ def product_list(request, company_id=None):
         messages.error(request, "No tienes permiso para ver esta empresa.")
         return redirect('dashboard')
 
+    # Solo se ve/suma el stock de las sucursales permitidas (ver _allowed_branches): un usuario
+    # con una sola sucursal asignada no debe poder inferir cuánto hay en las demás.
+    allowed_branches = _allowed_branches(request, company)
     # "Bajo" es por sucursal, no por el total sumado: una sucursal en 0 con otra sobrada
     # da un total que parece sano, pero esa sucursal puntual sí necesita reabastecerse.
-    low_stock_subquery = Stock.objects.filter(product=OuterRef('pk'), quantity__lte=F('product__min_stock'))
+    low_stock_subquery = Stock.objects.filter(product=OuterRef('pk'), branch__in=allowed_branches, quantity__lte=F('product__min_stock'))
     products = (
         Product.objects.filter(company=company)
         .select_related('category')
         .annotate(
-            total_stock=Coalesce(Sum('stocks__quantity'), 0),
+            total_stock=Coalesce(Sum('stocks__quantity', filter=Q(stocks__branch__in=allowed_branches)), 0),
             has_low_stock=Exists(low_stock_subquery),
         )
         .order_by('name')
@@ -157,7 +169,8 @@ def product_detail(request, product_id):
         messages.error(request, "No tienes permiso para ver este producto.")
         return redirect('dashboard')
 
-    stocks = Stock.objects.filter(product=product).select_related('branch').order_by('branch__name')
+    allowed_branches = _allowed_branches(request, product.company)
+    stocks = Stock.objects.filter(product=product, branch__in=allowed_branches).select_related('branch').order_by('branch__name')
     total_stock = sum(s.quantity for s in stocks)
     return render(request, "products/product_detail.html", {
         'product': product, 'stocks': stocks, 'total_stock': total_stock,
@@ -180,7 +193,8 @@ def create_product(request, company_id=None):
     existing_skus = list(Product.objects.filter(company=company).values_list('sku', flat=True))
     # Se pide la existencia inicial por sucursal en el mismo form: el usuario pidió no tener
     # que crear el producto y después ir a otra pantalla aparte a cargarle el stock.
-    branches_qs = company.branches.filter(is_active=True).order_by('name')
+    # _allowed_branches: si tiene una sucursal asignada, solo puede cargar stock ahí, no en otras.
+    branches_qs = _allowed_branches(request, company)
     branch_names = {b.id: b.name for b in branches_qs}
 
     if request.method == "POST":
@@ -318,9 +332,9 @@ def update_product(request, product_id):
         return redirect('dashboard')
 
     categories_qs = Category.objects.order_by('name')
-    # Todas las sucursales activas, no solo las que ya tienen Stock: cubre productos creados
-    # antes de que la sucursal existiera, o sin stock inicial, y sucursales nuevas que se abran después.
-    branches_qs = product.company.branches.filter(is_active=True).order_by('name')
+    # Todas las sucursales activas (o solo la suya, ver _allowed_branches), no solo las que ya
+    # tienen Stock: cubre productos creados antes de que la sucursal existiera, o sin stock inicial.
+    branches_qs = _allowed_branches(request, product.company)
     branch_names = {b.id: b.name for b in branches_qs}
     current_stock_by_branch = dict(Stock.objects.filter(product=product).values_list('branch_id', 'quantity'))
     context = {
@@ -472,3 +486,153 @@ def activate_product(request, product_id):
     product.is_active = True
     product.save()
     return redirect(_product_list_url(request, product.company))
+
+"""------------------------------------------------------------------ Movement Views ------------------------------------------------------------------"""
+
+def _movement_list_url(request, company):
+    if request.user.is_platform_admin:
+        return reverse('inventory:movement_list', args=[company.id])
+    return reverse('inventory:movement_list')
+
+@login_required
+@movements_access_required
+def movement_list(request, company_id=None):
+    company = _resolve_company(request, company_id)
+    if company is None:
+        if request.user.is_platform_admin:
+            messages.error(request, "Selecciona una empresa desde el listado.")
+            return redirect('company:list')
+        messages.error(request, "No tienes permiso para ver esta empresa.")
+        return redirect('dashboard')
+
+    movements = (
+        Movement.objects.filter(company=company, branch__in=_allowed_branches(request, company))
+        .select_related('product', 'branch', 'user')
+        .order_by('-created_at')
+    )
+    return render(request, "movements/movement_list.html", {'company': company, 'movements': movements})
+
+@login_required
+@movements_access_required
+def create_movement(request, company_id=None):
+    company = _resolve_company(request, company_id)
+    if company is None:
+        if request.user.is_platform_admin:
+            messages.error(request, "Selecciona una empresa desde el listado.")
+            return redirect('company:list')
+        messages.error(request, "No tienes permiso para ver esta empresa.")
+        return redirect('dashboard')
+
+    products_qs = Product.objects.filter(company=company, is_active=True).order_by('name')
+    branches_qs = _allowed_branches(request, company)
+
+    if request.method == "POST":
+        branch_id = request.POST.get("branch", "").strip()
+        movement_type = request.POST.get("movement_type", "").strip()
+        reason = request.POST.get("reason", "").strip()
+        note = request.POST.get("note", "").strip()
+        # Varias filas Producto+Cantidad en paralelo (un solo movimiento "de compra" puede
+        # traer varios productos a la vez, como una factura), comparten sucursal/tipo/motivo/nota.
+        product_ids_posted = request.POST.getlist("product[]")
+        quantities_posted = request.POST.getlist("quantity[]")
+        posted_rows = [{'product': pid, 'quantity': qty} for pid, qty in zip(product_ids_posted, quantities_posted)]
+
+        base_context = {
+            'company': company, 'products': products_qs, 'branches': branches_qs,
+            'selected_branch': branch_id, 'selected_movement_type': movement_type,
+            'selected_reason': reason, 'note': note,
+            'product_rows': posted_rows or [{'product': '', 'quantity': ''}],
+        }
+
+        errors = []
+
+        if not branch_id:
+            errors.append("Selecciona la sucursal.")
+        if movement_type not in (Movement.IN, Movement.OUT):
+            errors.append("Selecciona el tipo de movimiento.")
+        if not reason:
+            errors.append("Selecciona el motivo.")
+        elif movement_type in Movement.REASONS_BY_TYPE and reason not in Movement.REASONS_BY_TYPE[movement_type]:
+            errors.append("Ese motivo no aplica para este tipo de movimiento.")
+
+        # Filas totalmente vacías (fila de más que el usuario no llegó a usar) se ignoran.
+        filled_rows = [
+            (pid.strip(), qty.strip())
+            for pid, qty in zip(product_ids_posted, quantities_posted)
+            if pid.strip() or qty.strip()
+        ]
+
+        if not filled_rows:
+            errors.append("Agrega al menos un producto.")
+
+        parsed_rows = []  # [(product_id, quantity), ...]
+        seen_product_ids = set()
+        for pid, qty_raw in filled_rows:
+            if not pid:
+                errors.append("Selecciona el producto en cada fila.")
+                break
+            if not qty_raw or not qty_raw.isdigit() or int(qty_raw) <= 0:
+                errors.append("La cantidad de cada producto debe ser un número entero mayor a cero.")
+                break
+            if pid in seen_product_ids:
+                errors.append("No repitas el mismo producto en dos filas: sumá la cantidad en una sola.")
+                break
+            seen_product_ids.add(pid)
+            parsed_rows.append((pid, int(qty_raw)))
+
+        if errors:
+            messages.error(request, errors[0])
+            return render(request, 'movements/create_movement.html', base_context)
+
+        # branch_obj sale de branches_qs (ya filtrado por _allowed_branches), no de un
+        # get_object_or_404(company=company) suelto: así alguien con una sola sucursal asignada
+        # no puede mandar a mano el id de otra sucursal de la misma empresa y saltarse el límite.
+        branch_obj = get_object_or_404(branches_qs, id=branch_id)
+
+        try:
+            with transaction.atomic():
+                results = []  # [(product_obj, resulting_quantity), ...]
+                for pid, quantity in parsed_rows:
+                    product_obj = get_object_or_404(Product, id=pid, company=company)
+                    stock_obj, _ = Stock.objects.get_or_create(product=product_obj, branch=branch_obj, defaults={'quantity': 0})
+
+                    if movement_type == Movement.OUT and quantity > stock_obj.quantity:
+                        raise ValidationError(f"No hay suficiente stock de {product_obj.name} en {branch_obj.name} (actual: {stock_obj.quantity}).")
+
+                    stock_obj.quantity += quantity if movement_type == Movement.IN else -quantity
+                    stock_obj.save()
+
+                    movement = Movement(
+                        company=company, branch=branch_obj, product=product_obj, user=request.user,
+                        movement_type=movement_type, reason=reason, quantity=quantity, note=note,
+                    )
+                    movement.full_clean()
+                    movement.save()
+                    results.append((product_obj, stock_obj.quantity))
+        except ValidationError as e:
+            messages.error(request, e.messages[0])
+            return render(request, 'movements/create_movement.html', base_context)
+        except IntegrityError:
+            messages.error(request, "Ocurrió un error al registrar el movimiento. Inténtalo de nuevo.")
+            return render(request, 'movements/create_movement.html', base_context)
+
+        # Éxito: NO se hace redirect() directo. Se re-renderiza el form con `redirect_url`
+        # para que el template muestre el SweetAlert y navegue recién al cerrarlo.
+        messages.success(request, f"Movimiento registrado: {len(results)} producto(s) en {branch_obj.name}.")
+
+        if movement_type == Movement.OUT:
+            low_products = [p.name for p, qty in results if qty <= p.min_stock]
+            if low_products:
+                messages.warning(request, f"{branch_obj.name} quedó con stock bajo en: {', '.join(low_products)}.")
+
+        return render(request, 'movements/create_movement.html', {
+            'company': company, 'products': products_qs, 'branches': branches_qs,
+            'product_rows': [{'product': '', 'quantity': ''}],
+            'redirect_url': _movement_list_url(request, company),
+        })
+
+    # GET: form vacío.
+    return render(request, 'movements/create_movement.html', {
+        'company': company, 'products': products_qs, 'branches': branches_qs,
+        'product_rows': [{'product': '', 'quantity': ''}],
+    })

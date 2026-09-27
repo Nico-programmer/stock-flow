@@ -1,17 +1,17 @@
 {% extends "layout.html" %}
 {% load static %}
 
-{% block title %}Gestión de usuarios{% endblock %}
+{% block title %}{% if request.user.is_platform_admin %}Gestión de usuarios{% else %}Gestión de empleados{% endif %}{% endblock %}
 {% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/products.css' %}">{% endblock %}
 
 {% block content %}
 <div class="page-header">
     <div>
-        <span class="section-label">Administración</span>
-        <h1>Gestión de usuarios</h1>
-        <p>Usuarios de todas las empresas.</p>
+        <span class="section-label">{% if request.user.is_platform_admin %}Administración{% else %}Empresa{% endif %}</span>
+        <h1>{% if request.user.is_platform_admin %}Gestión de usuarios{% else %}Gestión de empleados{% endif %}</h1>
+        <p>{% if request.user.is_platform_admin %}Usuarios de todas las empresas.{% else %}Empleados de tu empresa.{% endif %}</p>
     </div>
-    <a href="{% url "account:create" %}" class="btn btn-brand"><i class="fa-solid fa-plus"></i> Crear usuario</a>
+    <a href="{% url "account:create" %}" class="btn btn-brand"><i class="fa-solid fa-plus"></i> Crear {% if request.user.is_platform_admin %}usuario{% else %}empleado{% endif %}</a>
 </div>
 
 <div class="card-surface p-3 p-md-4">
@@ -20,8 +20,9 @@
             <thead>
                 <tr>
                     <th>Usuario</th>
-                    <th>Empresa</th>
+                    {% if request.user.is_platform_admin %}<th>Empresa</th>{% endif %}
                     <th>Grupo</th>
+                    <th>Sucursal</th>
                     <th>Teléfono</th>
                     <th>Estado</th>
                     <th class="nosort"></th>
@@ -34,8 +35,9 @@
                             <div class="fw-semibold">{{ user.full_name }}</div>
                             <div class="small text-muted-soft">{{ user.username }}</div>
                         </td>
-                        <td data-label="Empresa">{{ user.company.name|default:"—" }}</td>
+                        {% if request.user.is_platform_admin %}<td data-label="Empresa">{{ user.company.name|default:"—" }}</td>{% endif %}
                         <td data-label="Grupo">{{ user.group.name|default:"Sin grupo" }}</td>
+                        <td data-label="Sucursal">{{ user.branch.name|default:"Todas" }}</td>
                         <td data-label="Teléfono">{{ user.phone_number|default:"—" }}</td>
                         <td data-label="Estado">
                             {% if user.is_active %}
