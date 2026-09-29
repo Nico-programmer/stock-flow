@@ -28,4 +28,8 @@ urlpatterns = [
     path('movement-list/<int:company_id>/', movement_list, name="movement_list"),
     path('create-movement/', create_movement, name="movement_create"),
     path('create-movement/<int:company_id>/', create_movement, name="movement_create"),
+
+    # Report Views (sin company_id: usuario de negocio ve la suya / con company_id: soporte del admin)
+    path('reports/', report_view, name="report"),
+    path('reports/<int:company_id>/', report_view, name="report"),
 ]

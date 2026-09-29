@@ -18,7 +18,7 @@
 
 <div class="card-surface p-3 p-md-4">
     <div class="table-responsive">
-        <table class="table-app js-datatable">
+        <table class="table-app js-datatable" data-initial-order="6,asc">
             <thead>
                 <tr>
                     <th>Producto</th>
@@ -45,7 +45,7 @@
                         <td data-label="Cantidad" class="text-center">{{ m.quantity }}</td>
                         <td data-label="Motivo">{{ m.get_reason_display }}</td>
                         <td data-label="Usuario">{{ m.user.full_name|default:"—" }}</td>
-                        <td data-label="Fecha">{{ m.created_at|date:"d/m/Y H:i" }}</td>
+                        <td data-label="Fecha" data-order="{{ m.created_at|date:'U' }}">{{ m.created_at|date:"d/m/Y H:i" }}</td>
                     </tr>
                 {% endfor %}
             </tbody>

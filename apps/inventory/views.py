@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth.decorators import login_required
@@ -5,12 +6,13 @@ from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import Sum, Exists, OuterRef, F, Q
-from django.db.models.functions import Coalesce
+from django.db.models import Sum, Count, Exists, OuterRef, F, Q
+from django.db.models.functions import Coalesce, TruncDate
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
+from django.utils import timezone
 
-from apps.accounts.decorators import platform_admin_required, inventory_access_required, inventory_manage_required, movements_access_required
+from apps.accounts.decorators import platform_admin_required, inventory_access_required, inventory_manage_required, movements_access_required, reports_access_required
 from apps.companies.models import Company, Branch
 from .models import Category, Product, Stock, Movement
 
@@ -262,23 +264,36 @@ def create_product(request, company_id=None):
 
         category_obj = get_object_or_404(Category, id=category_id)
 
+        # Stock inicial: 10 unidades en cada sucursal activa, cada una como su propio Movement
+        # (tipo Entrada, motivo "ajuste") en vez de un Stock suelto, para no romper la regla de
+        # que el stock SIEMPRE cambia a través de un movimiento auditable.
+        INITIAL_STOCK_QTY = 10
         try:
-            product = Product(
-                company=company, category=category_obj,
-                name=name, sku=sku, unit=unit,
-                cost_price=cost_price, sale_price=sale_price, min_stock=min_stock,
-            )
-            product.full_clean()
-            product.save()
+            with transaction.atomic():
+                product = Product(
+                    company=company, category=category_obj,
+                    name=name, sku=sku, unit=unit,
+                    cost_price=cost_price, sale_price=sale_price, min_stock=min_stock,
+                )
+                product.full_clean()
+                product.save()
+
+                for branch in company.branches.filter(is_active=True):
+                    Stock.objects.create(product=product, branch=branch, quantity=INITIAL_STOCK_QTY)
+                    movement = Movement(
+                        company=company, branch=branch, product=product, user=request.user,
+                        movement_type=Movement.IN, reason='ajuste', quantity=INITIAL_STOCK_QTY,
+                        note="Stock inicial al crear el producto.",
+                    )
+                    movement.full_clean()
+                    movement.save()
         except (IntegrityError, ValidationError):
             messages.error(request, "Ocurrió un error al crear el producto. Inténtalo de nuevo.")
             return render(request, 'products/create_product.html', base_context)
 
         # Éxito: NO se hace redirect() directo. Se re-renderiza el form con `redirect_url`
         # para que el template muestre el SweetAlert y navegue recién al cerrarlo.
-        # El stock arranca en 0 en todas las sucursales: se carga después con un Movement
-        # (así todo cambio de stock queda registrado, en vez de poder pisarse desde el producto).
-        messages.success(request, f"Producto {name} creado correctamente. Cargá su stock con un movimiento.")
+        messages.success(request, f"Producto {name} creado correctamente, con {INITIAL_STOCK_QTY} unidades de stock inicial en cada sucursal.")
 
         return render(request, 'products/create_product.html', {
             'company': company,
@@ -461,8 +476,16 @@ def create_movement(request, company_id=None):
         messages.error(request, "No tienes permiso para ver esta empresa.")
         return redirect('dashboard')
 
-    products_qs = Product.objects.filter(company=company, is_active=True).order_by('name')
     branches_qs = _allowed_branches(request, company)
+    # Solo productos con Stock ya registrado en alguna de las sucursales permitidas: no tiene
+    # sentido ofrecer en el selector productos que esa sucursal nunca tuvo (pedido explícito
+    # del negocio, aunque implica que un producto recién creado necesita su primer Stock por
+    # otra vía antes de poder registrarle un movimiento).
+    products_qs = (
+        Product.objects.filter(company=company, is_active=True)
+        .filter(Exists(Stock.objects.filter(product=OuterRef('pk'), branch__in=branches_qs)))
+        .order_by('name')
+    )
 
     if request.method == "POST":
         branch_id = request.POST.get("branch", "").strip()
@@ -573,4 +596,118 @@ def create_movement(request, company_id=None):
     return render(request, 'movements/create_movement.html', {
         'company': company, 'products': products_qs, 'branches': branches_qs,
         'product_rows': [{'product': '', 'quantity': ''}],
+    })
+
+"""------------------------------------------------------------------ Report Views ------------------------------------------------------------------"""
+
+def _report_url(request, company):
+    if request.user.is_platform_admin:
+        return reverse('inventory:report', args=[company.id])
+    return reverse('inventory:report')
+
+# Reportes es de SOLO LECTURA: reutiliza el mismo alcance de sucursales/movimientos que
+# Movimientos, pero sin permitir crear/editar nada (can_access_reports es un permiso aparte).
+@login_required
+@reports_access_required
+def report_view(request, company_id=None):
+    company = _resolve_company(request, company_id)
+    if company is None:
+        if request.user.is_platform_admin:
+            messages.error(request, "Selecciona una empresa desde el listado.")
+            return redirect('company:list')
+        messages.error(request, "No tienes permiso para ver esta empresa.")
+        return redirect('dashboard')
+
+    branches_qs = _allowed_branches(request, company)
+    products_qs = Product.objects.filter(company=company).order_by('name')
+
+    today = timezone.localdate()
+    default_from = today - timedelta(days=30)
+
+    date_from_raw = request.GET.get('date_from', '').strip()
+    date_to_raw = request.GET.get('date_to', '').strip()
+    branch_filter = request.GET.get('branch', '').strip()
+    product_filter = request.GET.get('product', '').strip()
+    type_filter = request.GET.get('movement_type', '').strip()
+
+    try:
+        date_from = datetime.strptime(date_from_raw, '%Y-%m-%d').date() if date_from_raw else default_from
+    except ValueError:
+        date_from = default_from
+    try:
+        date_to = datetime.strptime(date_to_raw, '%Y-%m-%d').date() if date_to_raw else today
+    except ValueError:
+        date_to = today
+
+    movements = (
+        Movement.objects.filter(
+            company=company, branch__in=branches_qs,
+            created_at__date__gte=date_from, created_at__date__lte=date_to,
+        )
+        .select_related('product', 'branch', 'user')
+    )
+    if branch_filter:
+        movements = movements.filter(branch_id=branch_filter)
+    if product_filter:
+        movements = movements.filter(product_id=product_filter)
+    if type_filter in (Movement.IN, Movement.OUT):
+        movements = movements.filter(movement_type=type_filter)
+    movements = movements.order_by('-created_at')
+
+    total_in = sum(m.quantity for m in movements if m.movement_type == Movement.IN)
+    total_out = sum(m.quantity for m in movements if m.movement_type == Movement.OUT)
+
+    low_stock_count = Stock.objects.filter(
+        branch__in=branches_qs, quantity__lte=F('product__min_stock'), product__is_active=True,
+    ).values('product_id').distinct().count()
+
+    # Serie diaria (entradas vs salidas) para el gráfico de línea.
+    daily = (
+        movements
+        .annotate(day=TruncDate('created_at'))
+        .values('day', 'movement_type')
+        .annotate(total=Sum('quantity'))
+        .order_by('day')
+    )
+    daily_map = {}
+    for row in daily:
+        daily_map.setdefault(row['day'], {'IN': 0, 'OUT': 0})[row['movement_type']] = row['total']
+
+    chart_labels = []
+    chart_in = []
+    chart_out = []
+    cursor = date_from
+    while cursor <= date_to:
+        chart_labels.append(cursor.strftime('%d/%m'))
+        day_totals = daily_map.get(cursor, {'IN': 0, 'OUT': 0})
+        chart_in.append(day_totals.get('IN', 0))
+        chart_out.append(day_totals.get('OUT', 0))
+        cursor += timedelta(days=1)
+
+    # Top 5 productos más movidos (por cantidad) en el rango filtrado.
+    top_products = (
+        movements.values('product__name')
+        .annotate(total=Sum('quantity'))
+        .order_by('-total')[:5]
+    )
+
+    # Stock bajo por sucursal (sobre las sucursales permitidas, sin importar el rango de fechas).
+    low_stock_by_branch = (
+        Stock.objects.filter(branch__in=branches_qs, quantity__lte=F('product__min_stock'), product__is_active=True)
+        .values('branch__name')
+        .annotate(total=Count('id'))
+        .order_by('-total')
+    )
+
+    return render(request, 'reports/report_view.html', {
+        'company': company, 'branches': branches_qs, 'products': products_qs,
+        'movements': movements,
+        'date_from': date_from.strftime('%Y-%m-%d'), 'date_to': date_to.strftime('%Y-%m-%d'),
+        'selected_branch': branch_filter, 'selected_product': product_filter, 'selected_type': type_filter,
+        'total_in': total_in, 'total_out': total_out, 'low_stock_count': low_stock_count,
+        'chart_labels': chart_labels, 'chart_in': chart_in, 'chart_out': chart_out,
+        'top_products_labels': [p['product__name'] for p in top_products],
+        'top_products_values': [p['total'] for p in top_products],
+        'low_stock_labels': [b['branch__name'] for b in low_stock_by_branch],
+        'low_stock_values': [b['total'] for b in low_stock_by_branch],
     })

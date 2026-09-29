@@ -35,6 +35,31 @@
   </div>
 </div>
 
+{% if show_inventory_summary %}
+<div class="kpi-grid">
+  <div class="kpi-card kpi-blue">
+    <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-boxes-stacked"></i></span></div>
+    <span class="kpi-value">{{ total_products }}</span>
+    <span class="kpi-label">Productos activos</span>
+  </div>
+  <div class="kpi-card kpi-cyan">
+    <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-cubes"></i></span></div>
+    <span class="kpi-value">{{ total_stock_units }}</span>
+    <span class="kpi-label">Unidades en stock</span>
+  </div>
+  <div class="kpi-card kpi-pink">
+    <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></span></div>
+    <span class="kpi-value">{{ low_stock_count }}</span>
+    <span class="kpi-label">Con stock bajo</span>
+  </div>
+  <div class="kpi-card kpi-purple">
+    <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-right-left"></i></span></div>
+    <span class="kpi-value">{{ week_movements_in }} / {{ week_movements_out }}</span>
+    <span class="kpi-label">Entradas / salidas (7 días)</span>
+  </div>
+</div>
+{% endif %}
+
 <div class="dashboard-grid">
   <section class="card-surface chart-card" aria-label="Usuarios por grupo">
     <div class="card-head">
@@ -118,4 +143,33 @@
     </table>
   </div>
 </section>
+
+{% if show_inventory_summary %}
+<section class="card-surface chart-card mt-3" aria-label="Últimos movimientos">
+  <div class="card-head">
+    <h2 class="form-section-title">Últimos movimientos</h2>
+    {% if request.user.group.can_access_reports %}<a href="{% url 'inventory:report' %}" class="meta">Ver reportes</a>{% endif %}
+  </div>
+  <div class="table-responsive">
+    <table class="table-app">
+      <thead><tr><th>Producto</th><th>Sucursal</th><th class="text-center">Tipo</th><th class="text-center">Cantidad</th><th>Fecha</th></tr></thead>
+      <tbody>
+        {% for m in recent_movements %}
+          <tr>
+            <td>{{ m.product.name }}</td>
+            <td class="cell-muted">{{ m.branch.name }}</td>
+            <td class="text-center">
+              {% if m.movement_type == 'IN' %}<span class="badge-stock ok">Entrada</span>{% else %}<span class="badge-stock out">Salida</span>{% endif %}
+            </td>
+            <td class="text-center">{{ m.quantity }}</td>
+            <td class="cell-muted">{{ m.created_at|date:"d/m/Y H:i" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5"><div class="empty-state">Sin movimientos en los últimos 7 días.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
 {% endblock %}

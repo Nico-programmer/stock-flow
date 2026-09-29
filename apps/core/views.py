@@ -1,9 +1,14 @@
+from datetime import timedelta
+
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count
+from django.db.models import Count, Sum, F
+from django.utils import timezone
 
 from apps.companies.models import Company, Branch
 from apps.accounts.models import User, Group
+from apps.inventory.models import Product, Stock, Movement
+from apps.inventory.views import _allowed_branches
 
 # Paleta cíclica de la dona (ver .seg-*/.dot-* en pages/dashboard.css).
 DONUT_COLORS = ['purple', 'cyan', 'blue', 'pink', 'orange']
@@ -36,7 +41,7 @@ def build_donut(counts):
 # Resumen de UNA empresa: sucursales/usuarios activos, grupos y usuarios por grupo (dona).
 # Lo usa tanto el dashboard de un usuario normal (su propia empresa) como el del admin de
 # plataforma cuando filtra por una empresa puntual.
-def _company_dashboard_context(company, exclude_user_id=None):
+def _company_dashboard_context(request, company, exclude_user_id=None):
     branches_qs = Branch.objects.filter(company=company) if company else Branch.objects.none()
     users_qs = User.objects.filter(company=company) if company else User.objects.none()
 
@@ -53,7 +58,7 @@ def _company_dashboard_context(company, exclude_user_id=None):
 
     colleagues_qs = users_qs.exclude(id=exclude_user_id) if exclude_user_id else users_qs
 
-    return {
+    context = {
         'company': company,
         'active_branches': branches_qs.filter(is_active=True).count(),
         'active_users': users_qs.filter(is_active=True).count(),
@@ -62,6 +67,39 @@ def _company_dashboard_context(company, exclude_user_id=None):
         'donut_segments': segments,
         'donut_total': total,
     }
+
+    # Resumen de inventario: solo si puede ver algo de eso (admin de soporte, o su grupo tiene
+    # alguno de los 3 permisos). Es un pantallazo general (últimos 7 días, sin filtros); el
+    # detalle filtrable vive en Reportes, no acá.
+    group = getattr(request.user, 'group', None)
+    can_see_inventory = request.user.is_platform_admin or (group and (
+        group.can_access_inventory or group.can_manage_inventory or group.can_access_movements
+    ))
+    context['show_inventory_summary'] = bool(can_see_inventory) and company is not None
+
+    if context['show_inventory_summary']:
+        allowed_branches = _allowed_branches(request, company)
+        week_ago = timezone.localdate() - timedelta(days=6)
+
+        stock_qs = Stock.objects.filter(branch__in=allowed_branches)
+        low_stock_count = (
+            stock_qs.filter(quantity__lte=F('product__min_stock'), product__is_active=True)
+            .values('product_id').distinct().count()
+        )
+        movements_qs = Movement.objects.filter(
+            company=company, branch__in=allowed_branches, created_at__date__gte=week_ago,
+        )
+
+        context.update({
+            'total_products': Product.objects.filter(company=company, is_active=True).count(),
+            'total_stock_units': stock_qs.aggregate(total=Sum('quantity'))['total'] or 0,
+            'low_stock_count': low_stock_count,
+            'week_movements_in': sum(m.quantity for m in movements_qs if m.movement_type == Movement.IN),
+            'week_movements_out': sum(m.quantity for m in movements_qs if m.movement_type == Movement.OUT),
+            'recent_movements': movements_qs.select_related('product', 'branch').order_by('-created_at')[:5],
+        })
+
+    return context
 
 
 @login_required
@@ -74,7 +112,7 @@ def dashboard(request):
 
         if selected_company_id:
             selected_company = get_object_or_404(Company, id=selected_company_id)
-            context = _company_dashboard_context(selected_company)
+            context = _company_dashboard_context(request, selected_company)
         else:
             selected_company = None
             top_companies = (
@@ -106,5 +144,5 @@ def dashboard(request):
         context['selected_company'] = selected_company
         return render(request, 'dashboard_admin.html', context)
 
-    context = _company_dashboard_context(user.company, exclude_user_id=user.id)
+    context = _company_dashboard_context(request, user.company, exclude_user_id=user.id)
     return render(request, 'dashboard_user.html', context)

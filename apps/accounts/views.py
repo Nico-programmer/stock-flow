@@ -15,6 +15,7 @@ from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 
 from django.db import transaction, IntegrityError
+from django.db.models import Case, When
 
 # Import forms
 from .forms import *
@@ -82,10 +83,12 @@ def userList_view(request):
     # Admin de plataforma: todos los usuarios de todas las empresas (admin de plataforma primero).
     # Usuario de negocio con can_access_users: SOLO los empleados de su propia empresa.
     users = User.objects.select_related('company', 'group')
+    # Grupos de gerencia primero (nombre de plantilla con "gerent"), después por fecha de alta.
+    is_manager = Case(When(group__template__name__icontains='geren', then=0), default=1)
     if request.user.is_platform_admin:
-        users = users.order_by('-is_platform_admin', 'company__name', 'username')
+        users = users.order_by('-is_platform_admin', 'company__name', is_manager, 'date_joined')
     else:
-        users = users.filter(company_id=request.user.company_id).order_by('username')
+        users = users.filter(company_id=request.user.company_id).order_by(is_manager, 'date_joined')
     return render(request, "users/user_list.html", {'users': users})
 
 # Endpoint AJAX: lo llama el JS del form de usuarios al cambiar el <select> de empresa,

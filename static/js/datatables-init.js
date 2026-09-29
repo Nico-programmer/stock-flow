@@ -6,15 +6,24 @@
 
    Orden inicial: por default NINGUNO (respeta el orden que ya viene armado
    desde el servidor, ej. admin de plataforma primero en user_list). Una tabla
-   puede pedir un orden ascendente por columna con data-order="<indice>",
-   ej. <table class="js-datatable" data-order="0"> ordena asc por la 1ra columna.
+   puede pedir un orden por columna con data-initial-order="<indice>" (asc por
+   default) o data-initial-order="<indice>,desc", ej.
+   <table class="js-datatable" data-initial-order="6,desc"> ordena desc por la
+   7ma columna (columnas 0-indexadas).
+   NOTA: no usar "data-order" para esto — DataTables lo reserva como atributo
+   de auto-init en el <table> (espera JSON, ej. data-order='[[1,"asc"]]') y si
+   no matchea ese formato rompe la inicialización completa de la tabla.
    ============================================================ */
 document.addEventListener('DOMContentLoaded', function () {
   if (typeof $ === 'undefined' || !$.fn.DataTable) return
 
   $('.js-datatable').each(function () {
-    const orderCol = this.dataset.order
-    const order = orderCol !== undefined ? [[parseInt(orderCol, 10), 'asc']] : []
+    const orderCol = this.dataset.initialOrder
+    let order = []
+    if (orderCol !== undefined) {
+      const [colIndex, direction] = orderCol.split(',')
+      order = [[parseInt(colIndex, 10), direction === 'desc' ? 'desc' : 'asc']]
+    }
 
     $(this).DataTable({
       language: {

@@ -63,6 +63,20 @@ def movements_access_required(view_func):
     return wrapper
 
 
+def reports_access_required(view_func):
+    """Igual que inventory_access_required pero para can_access_reports: solo LECTURA
+    (historial/gráficos), nunca puede crear/editar movimientos ni productos."""
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        user = request.user
+        has_access = user.is_platform_admin or (user.group_id and user.group.can_access_reports)
+        if not has_access:
+            messages.error(request, "No tienes permiso para acceder a esta sección.")
+            return redirect('dashboard')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
 def users_access_required(view_func):
     """Igual que inventory_access_required pero para can_access_users: deja pasar al admin de
     plataforma (gestiona cualquier empresa) o a un usuario de negocio cuyo grupo tenga

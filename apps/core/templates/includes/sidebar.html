@@ -79,7 +79,7 @@
                 </a>
             {% endif %}
 
-            {% if request.user.group.can_access_inventory or request.user.group.can_access_movements %}
+            {% if request.user.group.can_access_inventory or request.user.group.can_access_movements or request.user.group.can_access_reports %}
                 <span class="sidebar-section-label">Operación</span>
 
                 {% if request.user.group.can_access_inventory %}
@@ -97,6 +97,15 @@
                        {% if 'movement_' in request.resolver_match.url_name %}aria-current="page"{% endif %}>
                         <span class="nav-icon"><i class="fa-solid fa-right-left"></i></span>
                         <span class="nav-label">Movimientos</span>
+                    </a>
+                {% endif %}
+
+                {% if request.user.group.can_access_reports %}
+                    <a href="{% url 'inventory:report' %}"
+                       class="nav-link-item{% if request.resolver_match.url_name == 'report' %} active{% endif %}"
+                       {% if request.resolver_match.url_name == 'report' %}aria-current="page"{% endif %}>
+                        <span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span>
+                        <span class="nav-label">Reportes</span>
                     </a>
                 {% endif %}
             {% endif %}

@@ -1,0 +1,171 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block title %}Reportes{% endblock %}
+{% block page_css %}
+    <link rel="stylesheet" href="{% static 'css/pages/products.css' %}">
+    <link rel="stylesheet" href="{% static 'css/pages/dashboard.css' %}">
+    <style>.chart-box { position: relative; height: 260px; }</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <span class="section-label">{% if request.user.is_platform_admin %}{{ company.name }}{% else %}Inventario{% endif %}</span>
+        <h1>Reportes</h1>
+        <p>Resumen de movimientos e inventario. Solo lectura.</p>
+    </div>
+</div>
+
+<div class="card-surface p-3 p-md-4 mb-3">
+    <form method="GET" class="filter-bar align-items-end">
+        <div>
+            <label for="date_from" class="form-label small mb-1">Desde</label>
+            <input type="date" id="date_from" name="date_from" class="form-control form-select-sm" value="{{ date_from }}">
+        </div>
+        <div>
+            <label for="date_to" class="form-label small mb-1">Hasta</label>
+            <input type="date" id="date_to" name="date_to" class="form-control form-select-sm" value="{{ date_to }}">
+        </div>
+        <div>
+            <label for="branch" class="form-label small mb-1">Sucursal</label>
+            <select id="branch" name="branch" class="form-select form-select-sm">
+                <option value="">Todas</option>
+                {% for b in branches %}
+                    <option value="{{ b.id }}" {% if b.id|stringformat:"s" == selected_branch %}selected{% endif %}>{{ b.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="product" class="form-label small mb-1">Producto</label>
+            <select id="product" name="product" class="form-select form-select-sm">
+                <option value="">Todos</option>
+                {% for p in products %}
+                    <option value="{{ p.id }}" {% if p.id|stringformat:"s" == selected_product %}selected{% endif %}>{{ p.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="movement_type" class="form-label small mb-1">Tipo</label>
+            <select id="movement_type" name="movement_type" class="form-select form-select-sm">
+                <option value="">Todos</option>
+                <option value="IN" {% if selected_type == "IN" %}selected{% endif %}>Entrada</option>
+                <option value="OUT" {% if selected_type == "OUT" %}selected{% endif %}>Salida</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-brand btn-sm"><i class="fa-solid fa-filter"></i> Filtrar</button>
+    </form>
+</div>
+
+<div class="kpi-grid">
+    <div class="kpi-card kpi-cyan">
+        <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-arrow-down"></i></span></div>
+        <span class="kpi-value">{{ total_in }}</span>
+        <span class="kpi-label">Unidades de entrada</span>
+    </div>
+    <div class="kpi-card kpi-pink">
+        <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-arrow-up"></i></span></div>
+        <span class="kpi-value">{{ total_out }}</span>
+        <span class="kpi-label">Unidades de salida</span>
+    </div>
+    <div class="kpi-card kpi-purple">
+        <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></span></div>
+        <span class="kpi-value">{{ low_stock_count }}</span>
+        <span class="kpi-label">Productos con stock bajo</span>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <section class="card-surface chart-card" aria-label="Entradas vs salidas">
+        <div class="card-head">
+            <h2 class="form-section-title">Entradas vs. salidas</h2>
+            <span class="meta">{{ date_from }} — {{ date_to }}</span>
+        </div>
+        {% if chart_labels %}
+            <div class="chart-box"><canvas id="movementsChart"></canvas></div>
+        {% else %}
+            <div class="empty-state">No hay movimientos en el rango seleccionado.</div>
+        {% endif %}
+    </section>
+
+    <section class="card-surface chart-card" aria-label="Stock bajo por sucursal">
+        <div class="card-head">
+            <h2 class="form-section-title">Stock bajo por sucursal</h2>
+        </div>
+        {% if low_stock_labels %}
+            <div class="chart-box"><canvas id="lowStockChart"></canvas></div>
+        {% else %}
+            <div class="empty-state">Ninguna sucursal tiene productos con stock bajo.</div>
+        {% endif %}
+    </section>
+</div>
+
+<section class="card-surface chart-card mt-3" aria-label="Productos más movidos">
+    <div class="card-head">
+        <h2 class="form-section-title">Top 5 productos más movidos</h2>
+    </div>
+    {% if top_products_labels %}
+        <div class="chart-box"><canvas id="topProductsChart"></canvas></div>
+    {% else %}
+        <div class="empty-state">No hay movimientos en el rango seleccionado.</div>
+    {% endif %}
+</section>
+
+{{ chart_labels|json_script:"chart-labels" }}
+{{ chart_in|json_script:"chart-in" }}
+{{ chart_out|json_script:"chart-out" }}
+{{ top_products_labels|json_script:"top-products-labels" }}
+{{ top_products_values|json_script:"top-products-values" }}
+{{ low_stock_labels|json_script:"low-stock-labels" }}
+{{ low_stock_values|json_script:"low-stock-values" }}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+    const chartLabels = JSON.parse(document.getElementById('chart-labels').textContent);
+    const chartIn = JSON.parse(document.getElementById('chart-in').textContent);
+    const chartOut = JSON.parse(document.getElementById('chart-out').textContent);
+    const topProductsLabels = JSON.parse(document.getElementById('top-products-labels').textContent);
+    const topProductsValues = JSON.parse(document.getElementById('top-products-values').textContent);
+    const lowStockLabels = JSON.parse(document.getElementById('low-stock-labels').textContent);
+    const lowStockValues = JSON.parse(document.getElementById('low-stock-values').textContent);
+
+    Chart.defaults.color = 'oklch(0.85 0.02 260)';
+    Chart.defaults.borderColor = 'oklch(0.35 0.03 260)';
+
+    if (chartLabels.length) {
+        new Chart(document.getElementById('movementsChart'), {
+            type: 'bar',
+            data: {
+                labels: chartLabels,
+                datasets: [
+                    { label: 'Entradas', data: chartIn, backgroundColor: 'oklch(0.80 0.13 210)', borderRadius: 4 },
+                    { label: 'Salidas', data: chartOut, backgroundColor: 'oklch(0.72 0.20 355)', borderRadius: 4 },
+                ],
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
+        });
+    }
+
+    if (topProductsLabels.length) {
+        new Chart(document.getElementById('topProductsChart'), {
+            type: 'bar',
+            data: {
+                labels: topProductsLabels,
+                datasets: [{ label: 'Unidades movidas', data: topProductsValues, backgroundColor: 'oklch(0.66 0.21 295)' }],
+            },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } },
+        });
+    }
+
+    if (lowStockLabels.length) {
+        new Chart(document.getElementById('lowStockChart'), {
+            type: 'pie',
+            data: {
+                labels: lowStockLabels,
+                datasets: [{ data: lowStockValues, backgroundColor: ['oklch(0.66 0.21 295)', 'oklch(0.80 0.13 210)', 'oklch(0.66 0.19 258)', 'oklch(0.72 0.20 355)', 'oklch(0.78 0.15 55)'] }],
+            },
+            options: { responsive: true, maintainAspectRatio: false },
+        });
+    }
+</script>
+{% endblock %}
