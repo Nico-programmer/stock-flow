@@ -53,7 +53,8 @@
                 <option value="OUT" {% if selected_type == "OUT" %}selected{% endif %}>Salida</option>
             </select>
         </div>
-        <button type="submit" class="btn btn-brand btn-sm"><i class="fa-solid fa-filter"></i> Filtrar</button>
+        <button type="submit" class="btn btn-brand"><i class="fa-solid fa-filter"></i> Filtrar</button>
+        <button type="submit" name="export" value="xlsx" class="btn btn-outline-brand"><i class="fa-solid fa-download"></i> Exportar Excel</button>
     </form>
 </div>
 
@@ -72,6 +73,16 @@
         <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></span></div>
         <span class="kpi-value">{{ low_stock_count }}</span>
         <span class="kpi-label">Productos con stock bajo</span>
+    </div>
+    <div class="kpi-card kpi-blue">
+        <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-money-bill-trend-up"></i></span></div>
+        <span class="kpi-value">${{ value_in|floatformat:0 }}</span>
+        <span class="kpi-label">Valor de entradas</span>
+    </div>
+    <div class="kpi-card kpi-cyan">
+        <div class="kpi-top"><span class="kpi-icon"><i class="fa-solid fa-sack-dollar"></i></span></div>
+        <span class="kpi-value">${{ value_out|floatformat:0 }}</span>
+        <span class="kpi-label">Valor de salidas</span>
     </div>
 </div>
 

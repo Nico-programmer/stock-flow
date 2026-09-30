@@ -10,6 +10,7 @@ app_name = "account"
 urlpatterns = [
     path('', login_view, name='login'),
     path('logout/', logout_view, name='logout'),
+    path('olvide-mi-contrasena/', forgot_password_view, name='forgot_password'),
 
     # Users Wiews
     path('user-list/', userList_view, name="list"),

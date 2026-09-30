@@ -92,6 +92,14 @@ class Movement(models.Model):
     movement_type = models.CharField(max_length=3, choices=MOVEMENT_TYPES, verbose_name="Tipo")
     reason = models.CharField(max_length=20, choices=REASON_CHOICES, verbose_name="Motivo")
     quantity = models.PositiveIntegerField(verbose_name="Cantidad")
+    # Precio del producto AL MOMENTO del movimiento (costo si es Entrada, venta si es Salida):
+    # se copia una sola vez al crearlo y ya no cambia, aunque el producto suba o baje de precio
+    # después. Así el valor de un movimiento viejo queda fijo (control contable real).
+    unit_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Precio unitario")
+    # Comparte el mismo valor entre todas las filas creadas en un solo envío del formulario de
+    # Movimientos (una "factura" con varios productos), para poder agruparlas visualmente en el
+    # listado en vez de que se vean como registros sueltos sin relación entre sí.
+    batch_id = models.UUIDField(null=True, blank=True, db_index=True, verbose_name="Lote")
     note = models.CharField(max_length=250, blank=True, verbose_name="Nota")
 
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha")
@@ -104,6 +112,10 @@ class Movement(models.Model):
 
     def __str__(self):
         return f'{self.get_movement_type_display()} · {self.product.name} ({self.quantity})'
+
+    @property
+    def total_value(self):
+        return self.unit_price * self.quantity
 
     class Meta:
         verbose_name = "Movimiento"

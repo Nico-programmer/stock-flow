@@ -1,5 +1,10 @@
+import uuid
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
+
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
 
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
@@ -8,6 +13,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import Sum, Count, Exists, OuterRef, F, Q
 from django.db.models.functions import Coalesce, TruncDate
+from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
@@ -283,7 +289,7 @@ def create_product(request, company_id=None):
                     movement = Movement(
                         company=company, branch=branch, product=product, user=request.user,
                         movement_type=Movement.IN, reason='ajuste', quantity=INITIAL_STOCK_QTY,
-                        note="Stock inicial al crear el producto.",
+                        unit_price=product.cost_price, note="Stock inicial al crear el producto.",
                     )
                     movement.full_clean()
                     movement.save()
@@ -550,6 +556,10 @@ def create_movement(request, company_id=None):
         # no puede mandar a mano el id de otra sucursal de la misma empresa y saltarse el límite.
         branch_obj = get_object_or_404(branches_qs, id=branch_id)
 
+        # Un solo batch_id para todas las filas de este envío (aunque sea una sola): así el
+        # listado las puede agrupar como "un mismo movimiento" en vez de registros sueltos.
+        batch_id = uuid.uuid4()
+
         try:
             with transaction.atomic():
                 results = []  # [(product_obj, resulting_quantity), ...]
@@ -563,9 +573,11 @@ def create_movement(request, company_id=None):
                     stock_obj.quantity += quantity if movement_type == Movement.IN else -quantity
                     stock_obj.save()
 
+                    unit_price = product_obj.cost_price if movement_type == Movement.IN else product_obj.sale_price
                     movement = Movement(
                         company=company, branch=branch_obj, product=product_obj, user=request.user,
-                        movement_type=movement_type, reason=reason, quantity=quantity, note=note,
+                        movement_type=movement_type, reason=reason, quantity=quantity,
+                        unit_price=unit_price, batch_id=batch_id, note=note,
                     )
                     movement.full_clean()
                     movement.save()
@@ -604,6 +616,66 @@ def _report_url(request, company):
     if request.user.is_platform_admin:
         return reverse('inventory:report', args=[company.id])
     return reverse('inventory:report')
+
+# Excel con diseño real (encabezado con color, negrita, columnas ajustadas al contenido, filas
+# alternadas) en vez de un CSV a secas. Recibe el queryset YA filtrado por report_view.
+def _movements_to_xlsx(movements, date_from, date_to):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Movimientos"
+
+    headers = ['Producto', 'Sucursal', 'Tipo', 'Cantidad', 'Motivo', 'Precio unitario', 'Valor total', 'Usuario', 'Fecha']
+    ws.append(headers)
+
+    header_fill = PatternFill(start_color="FF1657D6", end_color="FF1657D6", fill_type="solid")
+    header_font = Font(color="FFFFFFFF", bold=True)
+    thin_border = Border(bottom=Side(style='thin', color='FFDDDDDD'))
+    stripe_fill = PatternFill(start_color="FFF2F5FB", end_color="FFF2F5FB", fill_type="solid")
+
+    for cell in ws[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    in_fill = PatternFill(start_color="FFDFF3E3", end_color="FFDFF3E3", fill_type="solid")
+    out_fill = PatternFill(start_color="FFFCE1E7", end_color="FFFCE1E7", fill_type="solid")
+
+    money_format = '#,##0'
+    total_value = 0
+    for i, m in enumerate(movements, start=2):
+        ws.append([
+            m.product.name, m.branch.name, m.get_movement_type_display(),
+            m.quantity, m.get_reason_display(), float(m.unit_price), float(m.total_value),
+            m.user.full_name if m.user else '—', m.created_at.strftime('%d/%m/%Y %H:%M'),
+        ])
+        total_value += m.total_value if m.movement_type == Movement.IN else -m.total_value
+        row_fill = stripe_fill if i % 2 == 0 else None
+        type_fill = in_fill if m.movement_type == Movement.IN else out_fill
+        for col, cell in enumerate(ws[i], start=1):
+            cell.border = thin_border
+            cell.fill = type_fill if col == 3 else (row_fill or PatternFill())
+            if col in (6, 7):
+                cell.number_format = money_format
+
+    # Fila final: valor neto (entradas - salidas) del rango filtrado, para que el contador no
+    # tenga que sumar manualmente en Excel.
+    total_row = ws.max_row + 1
+    ws.cell(row=total_row, column=5, value="Neto (entradas - salidas):").font = Font(bold=True)
+    net_cell = ws.cell(row=total_row, column=7, value=float(total_value))
+    net_cell.font = Font(bold=True)
+    net_cell.number_format = money_format
+
+    for col_idx, header in enumerate(headers, start=1):
+        max_len = max([len(header)] + [len(str(ws.cell(row=r, column=col_idx).value or '')) for r in range(2, ws.max_row + 1)])
+        ws.column_dimensions[get_column_letter(col_idx)].width = max_len + 4
+
+    ws.freeze_panes = "A2"
+    ws.auto_filter.ref = ws.dimensions
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="movimientos_{date_from}_a_{date_to}.xlsx"'
+    wb.save(response)
+    return response
 
 # Reportes es de SOLO LECTURA: reutiliza el mismo alcance de sucursales/movimientos que
 # Movimientos, pero sin permitir crear/editar nada (can_access_reports es un permiso aparte).
@@ -654,8 +726,17 @@ def report_view(request, company_id=None):
         movements = movements.filter(movement_type=type_filter)
     movements = movements.order_by('-created_at')
 
+    # Exportar Excel: mismos filtros de arriba, se corta acá antes de armar gráficos/KPIs
+    # (no hace falta calcular nada de eso para descargar un archivo).
+    if request.GET.get('export') == 'xlsx':
+        return _movements_to_xlsx(movements, date_from, date_to)
+
     total_in = sum(m.quantity for m in movements if m.movement_type == Movement.IN)
     total_out = sum(m.quantity for m in movements if m.movement_type == Movement.OUT)
+    # Control monetario (para Contador/Gerencia): plata que entró (compras/costos) vs. plata
+    # que salió/se facturó (ventas), a precio congelado en cada movimiento (Movement.unit_price).
+    value_in = sum(m.total_value for m in movements if m.movement_type == Movement.IN)
+    value_out = sum(m.total_value for m in movements if m.movement_type == Movement.OUT)
 
     low_stock_count = Stock.objects.filter(
         branch__in=branches_qs, quantity__lte=F('product__min_stock'), product__is_active=True,
@@ -705,6 +786,7 @@ def report_view(request, company_id=None):
         'date_from': date_from.strftime('%Y-%m-%d'), 'date_to': date_to.strftime('%Y-%m-%d'),
         'selected_branch': branch_filter, 'selected_product': product_filter, 'selected_type': type_filter,
         'total_in': total_in, 'total_out': total_out, 'low_stock_count': low_stock_count,
+        'value_in': value_in, 'value_out': value_out,
         'chart_labels': chart_labels, 'chart_in': chart_in, 'chart_out': chart_out,
         'top_products_labels': [p['product__name'] for p in top_products],
         'top_products_values': [p['total'] for p in top_products],

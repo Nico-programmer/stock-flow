@@ -16,6 +16,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 
 from django.db import transaction, IntegrityError
 from django.db.models import Case, When
+from django.utils import timezone
 
 # Import forms
 from .forms import *
@@ -51,6 +52,9 @@ def login_view(request):
 
             if user is not None:
                 login(request, user)  # crea la sesión
+                # Se consume una sola vez en dashboard(): el aviso de solicitudes pendientes
+                # aparece justo después de loguearse, no en cada visita al dashboard.
+                request.session['show_pending_reset_notice'] = True
 
                 # Éxito: NO se hace redirect() directo. Se re-renderiza el login con `redirect_url`
                 # para que el template muestre el SweetAlert y navegue recién al cerrarlo.
@@ -74,6 +78,28 @@ def logout_view(request):
     messages.success(request, "Sesión cerrada correctamente.")
     # Mismo patrón que login: renderiza con redirect_url en vez de redirect() directo.
     return render(request, "login.html", {'form': LoginForm, 'redirect_url': reverse('account:login')})
+
+# Sin infraestructura de email/SMS: no resetea nada acá. Solo deja un aviso visible para quien
+# tenga can_access_users en la empresa del usuario (o el admin de plataforma), que le asigna
+# una contraseña nueva a mano desde Gestión de empleados (ver update_user).
+def forgot_password_view(request):
+    if request.method == "POST":
+        username = request.POST.get("username", "").strip()
+        # Mismo mensaje siempre exista o no el usuario: no confirma ni niega si un username
+        # existe (evita que alguien use este form para enumerar cuentas válidas).
+        messages.success(
+            request,
+            "Si el usuario existe, ya se le avisó a la persona encargada de usuarios en tu "
+            "empresa. Pedile que te asigne una contraseña nueva desde Gestión de empleados.",
+        )
+
+        user_obj = User.objects.filter(username=username, is_platform_admin=False).first()
+        if user_obj is not None:
+            PasswordResetRequest.objects.create(user=user_obj)
+
+        return render(request, "forgot_password.html", {'redirect_url': reverse('account:login')})
+
+    return render(request, "forgot_password.html")
 
 """------------------------------------------------------------------ Users View ------------------------------------------------------------------"""
 
@@ -257,6 +283,10 @@ def update_user(request, user_id):
         full_name = request.POST.get("full_name", "").strip()
         username = request.POST.get("username", "").strip()
         phone_number = request.POST.get("phone_number", "").strip()
+        # Opcional: vacío = no se toca la contraseña actual. Es cómo se resuelve una
+        # solicitud de "olvidé mi contraseña" (ver forgot_password_view / PasswordResetRequest).
+        new_password = request.POST.get("new_password", "")
+        new_password2 = request.POST.get("new_password2", "")
 
         # Se re-renderiza el form conservando lo que el admin ya había escrito, si hay que volver a mostrarlo.
         submitted_context = {
@@ -276,10 +306,11 @@ def update_user(request, user_id):
         # exclude(id=employee.id): que el propio usuario no cuente como "duplicado" de sí mismo.
         if User.objects.filter(username=username).exclude(id=employee.id).exists():
             errors.append("Ese nombre de usuario ya está en uso.")
-        # Mismo criterio que en create_user: un usuario de negocio no puede dejar a un empleado
-        # sin sucursal (eso solo lo decide el admin de plataforma para el dueño de la empresa).
-        if not is_admin and not branch_id:
-            errors.append("Selecciona la sucursal del empleado.")
+        # A diferencia de create_user, acá NO se obliga la sucursal: un empleado que ya quedó
+        # sin sucursal (ve todas, ej. Gerente General o un Contador de toda la empresa) tiene
+        # que poder seguir editándose sin forzarlo a asignarle una.
+        if new_password and new_password != new_password2:
+            errors.append("Las contraseñas nuevas no coinciden.")
 
         if errors:
             messages.error(request, errors[0])
@@ -299,13 +330,21 @@ def update_user(request, user_id):
                 employee.branch = branch_obj
 
                 employee.full_clean()
+                if new_password:
+                    employee.set_password(new_password)
                 employee.save()
+
+                if new_password:
+                    PasswordResetRequest.objects.filter(user=employee, resolved_at__isnull=True).update(resolved_at=timezone.now())
         except (IntegrityError, ValidationError):
             messages.error(request, "Ocurrió un error al actualizar el usuario. Inténtalo de nuevo.")
             return render(request, "users/update_user.html", submitted_context)
 
         # Éxito: redirect_url en el contexto para el SweetAlert; el render de abajo lo usa.
-        messages.success(request, f"El usuario {username} fue editado exitosamente.")
+        if new_password:
+            messages.success(request, f"El usuario {username} fue editado y su contraseña fue actualizada.")
+        else:
+            messages.success(request, f"El usuario {username} fue editado exitosamente.")
         context['redirect_url'] = reverse('account:list')
 
     return render(request, 'users/update_user.html', context)

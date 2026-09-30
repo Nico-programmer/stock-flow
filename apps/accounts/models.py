@@ -184,3 +184,20 @@ class User(AbstractBaseUser):
     class Meta:
         verbose_name = "Usuario"
         verbose_name_plural = "Usuarios"
+
+
+class PasswordResetRequest(models.Model):
+    """Aviso de 'olvidé mi contraseña' sin infraestructura de email/SMS: el usuario pide desde
+    el login, y queda visible para quien tenga can_access_users en su empresa (o el admin de
+    plataforma), que le asigna una nueva contraseña editándolo desde Gestión de empleados."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='password_reset_requests', verbose_name="Usuario")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de solicitud")
+    resolved_at = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de resolución")
+
+    def __str__(self):
+        return f'{self.user.username} · {self.created_at:%d/%m/%Y %H:%M}'
+
+    class Meta:
+        verbose_name = "Solicitud de restablecer contraseña"
+        verbose_name_plural = "Solicitudes de restablecer contraseña"
+        ordering = ['-created_at']

@@ -49,11 +49,23 @@
     <div class="card-surface p-3 p-md-4">
         <div class="card-head">
             <h6 class="form-section-title mb-0">Sucursales</h6>
-            <span class="meta">{{ branches|length }}</span>
+            <div class="d-flex align-items-center gap-2">
+                <span class="meta">{{ branches|length }}</span>
+                {% if can_manage_branches %}
+                    <a href="{% if request.user.is_platform_admin %}{% url 'company:branch_create' company.id %}{% else %}{% url 'company:branch_create' %}{% endif %}" class="btn btn-brand btn-sm">
+                        <i class="fa-solid fa-plus"></i> Agregar sucursal
+                    </a>
+                {% endif %}
+            </div>
         </div>
         <div class="table-responsive">
-            <table class="table-app table-stack-mobile">
-                <thead><tr><th>Nombre</th><th>Dirección</th><th>Estado</th></tr></thead>
+            <table class="table-app table-stack-mobile js-datatable" data-initial-order="0,asc">
+                <thead>
+                    <tr>
+                        <th>Nombre</th><th>Dirección</th><th>Estado</th>
+                        {% if can_manage_branches %}<th class="nosort"></th>{% endif %}
+                    </tr>
+                </thead>
                 <tbody>
                     {% for b in branches %}
                         <tr>
@@ -66,9 +78,37 @@
                                     <span class="badge-stock out">Inactiva</span>
                                 {% endif %}
                             </td>
+                            {% if can_manage_branches %}
+                                <td data-label="Acciones" class="text-end text-nowrap">
+                                    <a href="{% url 'company:branch_update' b.id %}" class="btn btn-outline-brand btn-sm" title="Editar">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </a>
+                                    {% if b.is_active %}
+                                        {% if b.active_employees_count > 0 %}
+                                            <a href="{% url 'company:branch_deactivate_review' b.id %}" class="btn btn-outline-brand btn-sm" title="Desactivar">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </a>
+                                        {% else %}
+                                            <form method="POST" action="{% url 'company:inactive_branch' b.id %}" class="js-confirm-submit" data-confirm-title="¿Desactivar sucursal?" data-confirm-text="{{ b.name }} dejará de estar disponible." data-confirm-button="Sí, desactivar" style="display:inline;">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-outline-brand btn-sm" title="Desactivar">
+                                                    <i class="fa-solid fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    {% else %}
+                                        <form method="POST" action="{% url 'company:active_branch' b.id %}" class="js-confirm-submit" data-confirm-icon="question" data-confirm-title="¿Reactivar sucursal?" data-confirm-text="{{ b.name }} volverá a estar disponible." data-confirm-button="Sí, reactivar" style="display:inline;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-outline-brand btn-sm" title="Reactivar">
+                                                <i class="fa-solid fa-rotate-left"></i>
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </td>
+                            {% endif %}
                         </tr>
                     {% empty %}
-                        <tr><td colspan="3"><div class="empty-state">Esta empresa aún no tiene sucursales.</div></td></tr>
+                        <tr><td colspan="4"><div class="empty-state">Esta empresa aún no tiene sucursales.</div></td></tr>
                     {% endfor %}
                 </tbody>
             </table>

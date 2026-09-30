@@ -2,14 +2,17 @@
 {% load static %}
 
 {% block title %}Movimientos{% endblock %}
-{% block page_css %}<link rel="stylesheet" href="{% static 'css/pages/products.css' %}">{% endblock %}
+{% block page_css %}
+    <link rel="stylesheet" href="{% static 'css/pages/products.css' %}">
+    <link rel="stylesheet" href="https://cdn.datatables.net/rowgroup/1.5.1/css/rowGroup.dataTables.min.css">
+{% endblock %}
 
 {% block content %}
 <div class="page-header">
     <div>
         <span class="section-label">{% if request.user.is_platform_admin %}{{ company.name }}{% else %}Inventario{% endif %}</span>
         <h1>Movimientos</h1>
-        <p>Historial de entradas y salidas de stock.</p>
+        <p>Historial de entradas y salidas de stock. Los productos de un mismo registro quedan agrupados juntos.</p>
     </div>
     <a href="{% if request.user.is_platform_admin %}{% url "inventory:movement_create" company.id %}{% else %}{% url "inventory:movement_create" %}{% endif %}" class="btn btn-brand">
         <i class="fa-solid fa-plus"></i> Registrar movimiento
@@ -18,7 +21,7 @@
 
 <div class="card-surface p-3 p-md-4">
     <div class="table-responsive">
-        <table class="table-app js-datatable" data-initial-order="6,asc">
+        <table class="table-app js-movements-table" id="movements-table" data-initial-order="7,asc">
             <thead>
                 <tr>
                     <th>Producto</th>
@@ -26,8 +29,10 @@
                     <th class="text-center">Tipo</th>
                     <th class="text-center">Cantidad</th>
                     <th>Motivo</th>
+                    <th class="text-end">Valor</th>
                     <th>Usuario</th>
                     <th>Fecha</th>
+                    <th>Lote</th>
                 </tr>
             </thead>
             <tbody>
@@ -44,12 +49,19 @@
                         </td>
                         <td data-label="Cantidad" class="text-center">{{ m.quantity }}</td>
                         <td data-label="Motivo">{{ m.get_reason_display }}</td>
+                        <td data-label="Valor" class="text-end">${{ m.total_value|floatformat:0 }}</td>
                         <td data-label="Usuario">{{ m.user.full_name|default:"—" }}</td>
                         <td data-label="Fecha" data-order="{{ m.created_at|date:'U' }}">{{ m.created_at|date:"d/m/Y H:i" }}</td>
+                        <td data-label="Lote">{{ m.batch_id|default:m.id }}</td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="https://cdn.datatables.net/rowgroup/1.5.1/js/dataTables.rowGroup.min.js"></script>
+    <script src="{% static 'js/movements/row_group.script.js' %}"></script>
 {% endblock %}

@@ -42,6 +42,97 @@
 .topbar-btn:hover { background: var(--glass-strong); }
 .topbar-btn:focus-visible { outline: 2px solid var(--c-cyan); outline-offset: 2px; }
 
+.topbar-bell { position: relative; }
+.bell-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--c-pink);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.notif-menu {
+  box-sizing: border-box;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  max-height: 420px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0;
+  background: rgba(10, 13, 23, 0.96);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-md);
+}
+
+.notif-header {
+  padding: 14px 16px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.notif-list { padding: 6px; }
+
+.notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  white-space: normal;
+}
+
+.notif-item:hover { background: var(--glass-strong); }
+
+.notif-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--glass);
+  color: var(--c-cyan);
+}
+
+.notif-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.notif-text { font-size: 13px; color: var(--ink); }
+.notif-time { font-size: 11px; color: var(--ink-faint); }
+
+.notif-empty {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 36px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+.notif-empty i { font-size: 24px; opacity: 0.5; }
+
 /* Va DESPUES de .topbar-btn a propósito: misma especificidad (una sola clase), así que el
    orden en el archivo decide, y esta regla necesita ganarle a "display: inline-flex" arriba. */
 @media (min-width: 768px) {
@@ -163,6 +254,12 @@
 .btn-brand:active { transform: translateY(0); color: #fff; }
 .btn-brand:focus-visible { outline: 2px solid var(--c-cyan); outline-offset: 3px; color: #fff; }
 
+.btn-brand.btn-sm { min-height: 36px; padding: 0 14px; font-size: 13px; }
+
+@media (max-width: 767.98px) {
+  .btn-brand.btn-sm { min-height: 44px; }
+}
+
 .btn-outline-brand {
   border: 1px solid var(--glass-border);
   color: var(--ink);
@@ -216,6 +313,17 @@
 .table-app tbody tr { transition: background-color 0.15s ease; }
 .table-app tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
 .table-app .cell-muted { color: var(--ink-soft); }
+
+/* Encabezado de grupo de RowGroup (ver movements/row_group.script.js): agrupa visualmente los
+   productos de un mismo movimiento bajo una sola fila con el resumen (sucursal/motivo/usuario/
+   fecha/total), en vez de que cada producto se vea como un registro suelto sin relación. */
+.table-app tr.rowgroup-header td {
+  background: var(--glass-strong);
+  border-bottom: 1px solid var(--glass-border);
+  padding: 10px 14px;
+  font-size: 13px;
+}
+.table-app tr.rowgroup-header:hover { background: var(--glass-strong); }
 
 /* Formularios */
 .form-label {

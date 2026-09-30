@@ -34,3 +34,27 @@
   .form-actions { flex-direction: column-reverse; }
   .form-actions .btn { width: 100%; }
 }
+
+/* Tarjeta seleccionable con un radio/checkbox oculto (ver branch_deactivate_review.html):
+   <label class="option-card"><input type="radio" ...><span>...</span></label> */
+.option-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  height: 100%;
+  padding: 16px;
+  border-radius: var(--radius-lg, 16px);
+  border: 1px solid var(--glass-border);
+  background: var(--glass);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.option-card:hover { border-color: rgba(255, 255, 255, 0.2); }
+
+.option-card input[type="radio"] { margin-top: 3px; flex-shrink: 0; }
+
+.option-card:has(input:checked) {
+  border-color: var(--c-cyan);
+  background: var(--glass-strong);
+}

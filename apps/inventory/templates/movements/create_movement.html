@@ -118,19 +118,23 @@
                         <div id="product-rows-container">
                             {% for row in product_rows %}
                                 <div class="row g-3 align-items-end mb-2 product-row">
-                                    <div class="col-md-7">
+                    <div class="col-md-6">
                                         <label class="form-label">Producto</label>
                                         <select name="product[]" class="form-select js-product-select">
                                             <option value="" disabled {% if not row.product %}selected{% endif %}>Selecciona el producto</option>
                                             {% for p in products %}
-                                                <option value="{{ p.id }}" {% if p.id|stringformat:"s" == row.product %}selected{% endif %}>{{ p.name }} ({{ p.sku }})</option>
+                                                <option value="{{ p.id }}" data-cost="{{ p.cost_price|stringformat:'s' }}" data-sale="{{ p.sale_price|stringformat:'s' }}" {% if p.id|stringformat:"s" == row.product %}selected{% endif %}>{{ p.name }} ({{ p.sku }})</option>
                                             {% endfor %}
                                         </select>
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <label class="form-label">Cantidad</label>
-                                        <input type="number" name="quantity[]" class="form-control" step="1" min="1"
+                                        <input type="number" name="quantity[]" class="form-control js-row-quantity" step="1" min="1"
                                             placeholder="0" value="{{ row.quantity }}">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">Subtotal</label>
+                                        <div class="form-control-plaintext js-row-subtotal">$0</div>
                                     </div>
                                     <div class="col-md-1 d-grid">
                                         <button type="button" class="btn btn-outline-brand remove-product-row" title="Quitar">
@@ -143,18 +147,22 @@
 
                         <template id="product-row-template">
                             <div class="row g-3 align-items-end mb-2 product-row">
-                                <div class="col-md-7">
+                                <div class="col-md-6">
                                     <label class="form-label">Producto</label>
                                     <select name="product[]" class="form-select js-product-select">
                                         <option value="" disabled selected>Selecciona el producto</option>
                                         {% for p in products %}
-                                            <option value="{{ p.id }}">{{ p.name }} ({{ p.sku }})</option>
+                                            <option value="{{ p.id }}" data-cost="{{ p.cost_price|stringformat:'s' }}" data-sale="{{ p.sale_price|stringformat:'s' }}">{{ p.name }} ({{ p.sku }})</option>
                                         {% endfor %}
                                     </select>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label class="form-label">Cantidad</label>
-                                    <input type="number" name="quantity[]" class="form-control" step="1" min="1" placeholder="0">
+                                    <input type="number" name="quantity[]" class="form-control js-row-quantity" step="1" min="1" placeholder="0">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Subtotal</label>
+                                    <div class="form-control-plaintext js-row-subtotal">$0</div>
                                 </div>
                                 <div class="col-md-1 d-grid">
                                     <button type="button" class="btn btn-outline-brand remove-product-row" title="Quitar">
@@ -164,6 +172,11 @@
                             </div>
                         </template>
                     {% endif %}
+                </div>
+
+                <div class="card-surface form-card mb-3 d-flex flex-row justify-content-between align-items-center">
+                    <span class="form-section-title mb-0">Total del movimiento</span>
+                    <span class="fs-4 fw-bold text-ink" id="movement-total">$0</span>
                 </div>
 
                 <div class="form-actions">
@@ -192,6 +205,10 @@
                 </ul>
 
                 <p class="small text-muted-soft mb-0"><strong class="text-ink">Ajuste</strong>: corrección manual, para cuadrar el sistema con lo que hay físicamente en la sucursal (vale tanto para entrada como para salida).</p>
+
+                <hr class="my-3">
+
+                <p class="small text-muted-soft mb-0"><strong class="text-ink">Total del movimiento</strong>: se calcula solo, a precio de costo en una Entrada (lo que pagás al proveedor) o a precio de venta en una Salida (lo que le cobrás al cliente).</p>
             </div>
         </div>
     </div>
@@ -199,4 +216,5 @@
     <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
     <script src="{% static 'js/movements/product_rows.script.js' %}"></script>
     <script src="{% static 'js/movements/reason_filter.script.js' %}"></script>
+    <script src="{% static 'js/movements/total_calc.script.js' %}"></script>
 {% endblock %}

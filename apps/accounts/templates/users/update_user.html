@@ -78,13 +78,11 @@
                         </div>
 
                         <div>
-                            <label for="branch" class="form-label">Sucursal{% if is_admin %} (opcional){% endif %}</label>
-                            <select name="branch" id="branch" class="form-select" data-current="{{ selected_branch|default:employee.branch_id|default:'' }}" {% if not is_admin %}required{% endif %}>
+                            <label for="branch" class="form-label">Sucursal (opcional)</label>
+                            <select name="branch" id="branch" class="form-select" data-current="{{ selected_branch|default:employee.branch_id|default:'' }}">
                                 <option value="">Primero selecciona una empresa</option>
                             </select>
-                            {% if is_admin %}
-                                <div class="small text-muted-soft mt-1">Vacío = ve todas las sucursales de la empresa.</div>
-                            {% endif %}
+                            <div class="small text-muted-soft mt-1">Vacío = ve todas las sucursales de la empresa.</div>
                         </div>
 
                         <div>
@@ -100,6 +98,32 @@
                         <div>
                             <label for="phone_number" class="form-label">Teléfono</label>
                             <input type="text" id="phone_number" name="phone_number" class="form-control" placeholder="Número de contacto" value="{{ phone_number|default:employee.phone_number }}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-surface form-card mb-3">
+                    <h6 class="form-section-title">Restablecer contraseña</h6>
+                    <p class="small text-muted-soft mb-2">Dejá estos campos vacíos para no cambiar la contraseña actual.</p>
+
+                    <div class="form-two-col">
+                        <div>
+                            <label for="new_password" class="form-label">Nueva contraseña</label>
+                            <div class="input-group">
+                                <input type="password" id="new_password" name="new_password" class="form-control" placeholder="Dejar vacío para no cambiarla">
+                                <button type="button" class="btn btn-outline-brand toggle-password" data-target="new_password">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="new_password2" class="form-label">Confirmar nueva contraseña</label>
+                            <div class="input-group">
+                                <input type="password" id="new_password2" name="new_password2" class="form-control" placeholder="Repetir contraseña">
+                                <button type="button" class="btn btn-outline-brand toggle-password" data-target="new_password2">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -148,7 +172,7 @@
                     </div>
                 {% endif %}
 
-                <p class="small text-muted-soft mb-0"><strong class="text-ink">Sucursal</strong>: define DÓNDE trabaja. {% if is_admin %}Dejarla vacía crea un usuario "de empresa", que ve y opera sobre todas las sucursales.{% else %}Cada empleado queda limitado a ver y mover stock solo en su propia sucursal, nunca en las demás.{% endif %}</p>
+                <p class="small text-muted-soft mb-0"><strong class="text-ink">Sucursal</strong>: define DÓNDE trabaja. Dejarla vacía lo deja como un usuario "de empresa", que ve y opera sobre todas las sucursales (ej. un Contador o Gerente que necesite ver todo); asignarle una lo limita a ver y mover stock solo ahí.</p>
             </div>
         </div>
     </div>

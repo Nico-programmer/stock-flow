@@ -2,11 +2,12 @@ from datetime import timedelta
 
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.db.models import Count, Sum, F
 from django.utils import timezone
 
 from apps.companies.models import Company, Branch
-from apps.accounts.models import User, Group
+from apps.accounts.models import User, Group, PasswordResetRequest
 from apps.inventory.models import Product, Stock, Movement
 from apps.inventory.views import _allowed_branches
 
@@ -105,6 +106,18 @@ def _company_dashboard_context(request, company, exclude_user_id=None):
 @login_required
 def dashboard(request):
     user = request.user
+
+    # Aviso de solicitudes de restablecer contraseña pendientes: se muestra UNA sola vez, justo
+    # después de loguearse (ver login_view), no en cada visita al dashboard.
+    if request.session.pop('show_pending_reset_notice', False):
+        can_manage = user.is_platform_admin or (user.group_id and user.group.can_access_users)
+        if can_manage:
+            pending_qs = PasswordResetRequest.objects.filter(resolved_at__isnull=True)
+            if not user.is_platform_admin:
+                pending_qs = pending_qs.filter(user__company_id=user.company_id)
+            pending_count = pending_qs.count()
+            if pending_count:
+                messages.info(request, f"Tenés {pending_count} solicitud(es) de restablecer contraseña pendientes.")
 
     if user.is_platform_admin:
         companies_qs = Company.objects.order_by('name')

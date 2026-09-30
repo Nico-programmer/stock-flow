@@ -11,6 +11,32 @@
     <div></div>
 
     <div class="topbar-user">
+        <div class="dropdown">
+            <button type="button" class="topbar-btn topbar-bell" data-bs-toggle="dropdown" aria-expanded="false" title="Notificaciones">
+                <i class="fa-solid fa-bell"></i>
+                {% if notifications_count %}<span class="bell-badge">{{ notifications_count }}</span>{% endif %}
+            </button>
+            <div class="dropdown-menu dropdown-menu-end notif-menu">
+                <div class="notif-header">Notificaciones</div>
+                <div class="notif-list">
+                    {% for n in notifications %}
+                        <a href="{{ n.url }}" class="dropdown-item notif-item">
+                            <span class="notif-icon"><i class="fa-solid {{ n.icon }}"></i></span>
+                            <span class="notif-body">
+                                <span class="notif-text">{{ n.text }}</span>
+                                <span class="notif-time">hace {{ n.timestamp|timesince }}</span>
+                            </span>
+                        </a>
+                    {% empty %}
+                        <div class="notif-empty">
+                            <i class="fa-regular fa-bell-slash"></i>
+                            <span>Sin notificaciones</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
         <span class="avatar">{{ request.user.full_name|default:"U"|slice:":1"|upper }}</span>
         <span class="d-none d-sm-inline">{{ request.user.full_name|default:request.user.username }}</span>
     </div>
